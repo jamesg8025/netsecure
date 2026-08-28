@@ -3,6 +3,9 @@ __pycache__/
 *.py[codz]
 *$py.class
 
+node_modules/
+frontend/dist/
+
 # C extensions
 *.so
 
@@ -60,6 +63,8 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+*.db
+*.sqlite3
 
 # Flask stuff:
 instance/
@@ -156,6 +161,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.env.local
 
 # Spyder project settings
 .spyderproject
