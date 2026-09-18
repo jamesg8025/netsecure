@@ -1,0 +1,1 @@
+Refer to ./AGENTS.md for Claude-specific instructions.
