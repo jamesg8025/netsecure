@@ -1,1 +1,1 @@
-Refer to ./AGENTS.md for Claude-specific instructions.
+Refer to ./AGENTS.md for all project rules, workflow, and safety constraints.
