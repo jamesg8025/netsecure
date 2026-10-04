@@ -31,6 +31,27 @@ this repo. For the full rules — safety, branching, commits — see
 5. **Open a PR.** The agent can push the branch and open a PR that references
    the roadmap item and any SRS requirements.
 
+## Backend Setup
+
+Requires Python 3.14.7. From the repo root:
+
+```bash
+cd backend
+python -m venv .venv
+source .venv/bin/activate        # Windows: .venv\Scripts\activate
+pip install -r requirements.txt
+```
+
+Settings come from environment variables (see `backend/.env.example`). Nothing
+loads a `.env` file automatically, so export them in your shell. For local
+development, `DJANGO_DEBUG=1` is enough:
+
+```bash
+export DJANGO_DEBUG=1            # PowerShell: $env:DJANGO_DEBUG = "1"
+python manage.py test
+python manage.py runserver       # then open http://127.0.0.1:8000/api/health/
+```
+
 ## Branch and PR Conventions
 
 - Branch format: `<area>/<short-description>`

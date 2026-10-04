@@ -50,7 +50,7 @@ flowchart LR
 | Component | Directory | Key Files (planned) | SRS Coverage |
 |-----------|-----------|---------------------|--------------|
 | **Frontend** | `frontend/` | `src/App.tsx`, pages, components | FR-04, FR-06 (display), NFR-02, NFR-03 |
-| **Backend API** | `backend/` | `views.py`, `urls.py`, `settings.py` | FR-01 (invoke), FR-03 (store), FR-05 (warnings) |
+| **Backend API** | `backend/` | `config/settings.py`, `config/urls.py`, `api/views.py`, `api/urls.py` | FR-01 (invoke), FR-03 (store), FR-05 (warnings) |
 | **Scanner** | `scanner/` | `scanner.py`, `validator.py` | FR-01 (Nmap), FR-02 (validation) |
 | **Database** | `database/` | `schema.sql`, `models.py`, migrations | FR-03 (persistence), NFR-04 (failure logs) |
 | **Rule Engine** | `backend/` | `rules.py` | FR-05 (warnings), FR-06 (severity) |
@@ -61,7 +61,9 @@ As of initial scaffold:
 
 - **`frontend/`** — Vite + React + TypeScript + Tailwind v4 project initialized.
   Boilerplate `App.tsx` and `main.tsx` present. No application pages yet.
-- **`backend/`** — Empty (`.gitkeep`). Django project not yet created.
+- **`backend/`** — Django 6.1 project initialized (`config/` project package,
+  `api/` app). Settings read from environment variables; only `GET /api/health/`
+  is routed so far.
 - **`scanner/`** — Empty (`.gitkeep`). Scanner module not yet created.
 - **`database/`** — Empty (`.gitkeep`). Schema not yet defined.
 - **`docs/`** — SRS and Project Plan present. Design doc, roadmap, and this file

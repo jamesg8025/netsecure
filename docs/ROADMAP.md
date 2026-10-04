@@ -24,7 +24,7 @@ Check off items as they are completed. Each item shows its primary owner.
 - [ ] Structured output parsing (XML → dict) — **Zach**
 
 ### Backend Core (WBS 4.0) · Sep 21–Oct 25
-- [ ] Create Django project structure, settings, URLs — **Austin**
+- [x] Create Django project structure, settings, URLs — **Austin**
 - [ ] REST API routes for scan, devices, findings, history — **Austin**
 - [ ] Scan control: initiate, track status, return results — **Austin**
 - [ ] Input validation and error handling — **Austin**
