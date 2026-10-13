@@ -63,9 +63,9 @@ _User starts scan -> backend receives request -> Nmap scans the network -> Pytho
 
 - Nmap: Network discovery, port scanning, and network detection.
 - Python: Application logic, scan processing, and security analysis.
-- Web Application Backend: Handles communication between the user interface, scanning functionality, and stored data. The final framework may be Flask or Django.
+- Web Application Backend: Handles communication between the user interface, scanning functionality, and stored data. Built with Django.
 - SQLite: Stores scan results, device information, and related findings.
-- HTML/CSS/JavaScript: Provides the web-based user interface.
+- React / TypeScript with Tailwind CSS: Provides the web-based user interface.
 - GitHub: Provides version control and team collaboration.
 - VirtualBox: Provides a controlled testing environment for system development.
 
@@ -76,8 +76,8 @@ The following technologies and technical resources will be referenced throughout
 - Nmap - Nmap Reference Guide
 - Python - Python 3 Documentation
 - SQLite - SQLite Documentation
-- Flask / Django - Web Application Framework Documentation
-- Bootstrap / Tailwind CSS - Framework Documentation
+- Django - Web Application Framework Documentation
+- Tailwind CSS - Framework Documentation
 - Git / GitHub - Git / GitHub Documentation
 - Oracle VirtualBox - Oracle VirtualBox User Manual
 
@@ -94,7 +94,7 @@ The following technologies and technical resources will be referenced throughout
 | **Finding**        | A security-related observation generated from scan results.                  |
 | **Vulnerability**  | A weakness that could potentially affect the security of a system.           |
 | **Nmap**           | A network scanning tool used to discover devices, ports, and services.       |
-| **Flask / Django** | Web application frameworks under consideration for the NetSecure backend.    |
+| **Django**         | Python web application framework used for the NetSecure backend.             |
 | **SQLite**         | The database system used to store NetSecure scan information.                |
 
 # 7\. Use Cases
@@ -311,10 +311,8 @@ This matrix connects requirements to the use cases they support.
 
 # 11\. Open Decisions and Assumptions
 
-The updated presentation resolves the major use cases for View Security Threats and View Scan History. The following items remain open or should be confirmed by the team before implementation begins:
+The updated presentation resolves the major use cases for View Security Threats and View Scan History. Backend framework (Django) and styling framework (Tailwind CSS) were decided on Oct 12, 2026. The following items remain open or should be confirmed by the team before implementation begins:
 
-- Final backend framework selection: Flask or Django.
-- Final frontend styling framework selection: Bootstrap or Tailwind CSS.
 - Exact Ubuntu version for the testing environment.
 - Exact severity scale names and colors for security findings.
 - Final decision on whether scans will run through synchronous requests, background tasks, or another scan job approach.

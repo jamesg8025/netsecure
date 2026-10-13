@@ -8,7 +8,7 @@ Check off items as they are completed. Each item shows its primary owner.
 ## Phase 1 — Planning and Requirements (WBS 1.0) · Sep 9–18
 
 - [ ] Finalize project plan, SRS, roles, scope, GitHub workflow — **All / Zach lead**
-- [ ] Technology decision: choose Django vs Flask, Tailwind vs Bootstrap — **All / Austin + Izaiah** *(WBS 1.1)*
+- [x] Technology decision: chose Django over Flask, Tailwind over Bootstrap — **All / Austin + Izaiah** *(WBS 1.1)*
 - [ ] Development setup: standardize Git, Python, repo, branches, local environments — **James** *(WBS 1.2)*
 
 ## Phase 2 — Architecture and Interfaces (WBS 2.0) · Sep 16–27

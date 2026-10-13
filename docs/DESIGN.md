@@ -114,10 +114,10 @@ User        Frontend        Backend         Scanner         Nmap        Database
 
 | Decision | Rationale |
 |----------|-----------|
-| Django over Flask | Team decided; Django's ORM and admin simplify DB and auth work. |
+| Django over Flask | Team decision (WBS 1.1, Oct 12 2026); Django's ORM and admin simplify DB and auth work. |
 | SQLite | Sufficient for single-server lab use; no external DB server needed. |
 | Subprocess arg lists, never `shell=True` | Prevents command injection (FR-02, NFR-01). |
-| Tailwind CSS v4 + shadcn/ui | Modern component library; consistent styling with minimal CSS. |
+| Tailwind CSS v4 over Bootstrap (+ shadcn/ui) | Team decision (WBS 1.1, Oct 12 2026); utility-first styling with minimal custom CSS. |
 | Scans run asynchronously | Dashboard must not freeze during scans (NFR-02). |
 
 ## 8. Security Considerations
