@@ -50,7 +50,7 @@ Planning target: project complete and presentation-ready by November 20, 2026
 
 **Project Scope.** The project includes local-network discovery, port and service identification, scan-target validation, storage of scan history, display of discovered devices, security warning messages, severity indicators, and a web dashboard. The system is intended for authorized local or lab networks and will not perform exploitation, password attacks, malware analysis, or intrusive penetration testing.
 
-**Planning Assumption.** This plan uses November 20, 2026 as the internal completion target so the team has time for final class requirements, instructor feedback, and presentation preparation. The exact framework choice (Flask vs. Django and Bootstrap vs. Tailwind CSS) remains a team decision and is treated as an early design milestone rather than a fixed requirement.
+**Planning Assumption.** This plan uses November 20, 2026 as the internal completion target so the team has time for final class requirements, instructor feedback, and presentation preparation. The team selected Django for the backend and Tailwind CSS for styling (WBS 1.1, decided Oct 12, 2026).
 
 # **2\. Statement of Work (SOW)**
 
@@ -83,9 +83,9 @@ The following personnel, software, hardware, and information resources are expec
 | Development | VS Code \+ Git | Available/free | Standard development and version-control tools |
 | Runtime | Python 3.x | Available/free | Application logic and scan processing |
 | Scanner | Nmap | Available/free | Network discovery, port and service identification |
-| Backend | Flask or Django | TBD by team; both available/free | Web application framework |
+| Backend | Django | Selected; available/free | Web application framework |
 | Frontend | HTML/CSS/JavaScript | Available | Core browser interface |
-| CSS Framework | Bootstrap or Tailwind CSS | TBD by team; both available/free | Interface styling |
+| CSS Framework | Tailwind CSS | Selected; available/free | Interface styling |
 | Database | SQLite | Available/free | Local database and scan history |
 | Virtualization | Oracle VirtualBox | Available/free | Controlled VM-based test network |
 | Operating System | Ubuntu Linux | Available/free | Primary backend/scanner test environment |
@@ -102,7 +102,7 @@ Estimates are planning values in person-hours and may be adjusted as the team le
 | WBS | Task | Description | Owner | Est. Hours | Planned Window |
 | :---- | :---- | :---- | :---- | :---- | :---- |
 | 1.0 | Planning and Requirements | Finalize project plan, SRS, roles, scope, technology decisions, GitHub workflow | All / Zach lead | 18 | Sep 9-Sep 18 |
-| 1.1 | Technology Decision | Choose Flask vs. Django and Bootstrap vs. Tailwind; document decision | All / Austin \+ Izaiah | 4 | Sep 9-Sep 18 |
+| 1.1 | Technology Decision | Chose Django (over Flask) and Tailwind CSS (over Bootstrap); decision documented | All / Austin \+ Izaiah | 4 | Sep 9-Sep 18 |
 | 1.2 | Development Setup | Standardize Git, Python, repo, branches, local environments | James lead | 8 | Sep 9-Sep 18 |
 | 2.0 | Architecture and Interfaces | Define module boundaries, scan-result format, database interfaces, page/route map | All / James lead | 16 | Sep 16-Sep 27 |
 | 3.0 | Nmap Scanner | Configure Nmap, target validation, host discovery, service scans, structured output parsing | Zach | 26 | Sep 21-Oct 18 |
