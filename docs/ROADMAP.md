@@ -35,7 +35,7 @@ Check off items as they are completed. Each item shows its primary owner.
 - [ ] Data-access functions and scan-history queries — **Matt**
 
 ### Frontend (WBS 6.0) · Sep 21–Oct 25
-- [ ] Dashboard layout and navigation — **Izaiah**
+- [x] Dashboard layout and navigation — **Izaiah**
 - [ ] Scan initiation page with target input — **Izaiah**
 - [ ] Device list view — **Izaiah**
 - [ ] Security findings / warnings view with severity indicators — **Izaiah**

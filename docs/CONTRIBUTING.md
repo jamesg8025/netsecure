@@ -52,6 +52,25 @@ python manage.py test
 python manage.py runserver       # then open http://127.0.0.1:8000/api/health/
 ```
 
+## Frontend Setup
+
+Requires Node 24 (22.22+ also works). The repo root has an `.nvmrc`, so with
+[nvm](https://github.com/nvm-sh/nvm) run `nvm install` once, then `nvm use` in
+new terminals.
+
+```bash
+cd frontend
+npm ci                           # install exact versions from package-lock.json
+npm run dev                      # http://localhost:5173
+npm test                         # Vitest, once; npm run test:watch to re-run on save
+npm run lint
+npm run build                    # type-check + production build
+```
+
+The dev server forwards `/api/*` to the Django server at `127.0.0.1:8000`, so
+run the backend alongside it. The header shows **Backend: Connected** when
+it can reach `GET /api/health/`, and **Unreachable** when it can't.
+
 ## Branch and PR Conventions
 
 - Branch format: `<area>/<short-description>`
