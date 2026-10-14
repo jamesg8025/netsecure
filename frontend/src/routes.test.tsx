@@ -2,7 +2,7 @@ import { render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
-import { describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { routes } from './routes'
 
 function renderAt(path: string) {
@@ -12,6 +12,15 @@ function renderAt(path: string) {
 }
 
 describe('dashboard routes', () => {
+  // The layout's BackendStatus calls the health endpoint on mount.
+  beforeEach(() => {
+    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ status: 'ok' })))
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
   it('redirects the root path to New Scan', () => {
     const router = renderAt('/')
 

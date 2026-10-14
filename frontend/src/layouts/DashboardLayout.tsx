@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { NavLink, Outlet } from 'react-router'
+import BackendStatus from '../components/BackendStatus'
 
 const navItems = [
   { to: '/scan', label: 'New Scan' },
@@ -53,9 +54,14 @@ function DashboardLayout() {
         </nav>
       </aside>
 
-      <main className="min-w-0 flex-1 px-6 py-6">
-        <Outlet />
-      </main>
+      <div className="flex min-w-0 flex-1 flex-col">
+        <header className="flex items-center justify-end border-b border-slate-200 bg-white px-6 py-3">
+          <BackendStatus />
+        </header>
+        <main className="flex-1 px-6 py-6">
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
