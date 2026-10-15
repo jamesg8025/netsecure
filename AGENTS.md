@@ -29,7 +29,7 @@ for a 5-person senior project team. Full context lives in `docs/`:
 | `/scanner` | Nmap integration, target validation, scan execution, result parsing | Scaffolded (`.gitkeep` only) |
 | `/backend` | Python/Django web app, REST API, security rule engine | Initialized — Django 6.1 project (`config/`), `api` app with `/api/health/` |
 | `/database` | SQLite schema, migrations, data-access layer | Scaffolded (`.gitkeep` only) |
-| `/frontend` | React + TypeScript + Vite + Tailwind v4 dashboard | Initialized — boilerplate `App.tsx`, `main.tsx`, config files present |
+| `/frontend` | React + TypeScript + Vite + Tailwind v4 dashboard | Dashboard shell — routed placeholder pages, `/api` dev proxy, backend health indicator |
 | `/docs` | SRS, project plan, architecture, design, roadmap, contributing guide | Active |
 
 ## Critical Safety Rule
@@ -48,7 +48,7 @@ intent. This is a hard stop, not a style preference.
 | Scanner | Python, Nmap (subprocess, never `shell=True`) |
 | Backend | Python, Django |
 | Database | SQLite |
-| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, ESLint, shadcn/ui |
+| Frontend | React 19, TypeScript, Vite, Tailwind CSS v4, React Router, ESLint, Vitest + React Testing Library, shadcn/ui (planned) |
 | Source control | GitHub — classic branch protection on `main` (PR required, no direct pushes) |
 
 ## Workflow
