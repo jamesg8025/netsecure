@@ -58,7 +58,7 @@ function FindingsPage() {
 
   const filteredFindings = sampleFindings.filter((finding) => {
     const matchesSearch = 
-    '${finding.title} ${finding.ip} ${finding.service} ${finding.description}'
+    `${finding.title} ${finding.ip} ${finding.service} ${finding.description}`
     .toLowerCase()
     .includes(search.toLowerCase())
 
