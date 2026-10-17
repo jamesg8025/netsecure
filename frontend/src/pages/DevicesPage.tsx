@@ -39,7 +39,7 @@ function DevicesPage() {
           <table style = {{ width: '100%', borderCollapse: 'collapse', marginTop:'10px'}}>
             <thead>
               <tr>
-                <th style={{ width: '25%', padding: '12px', textAlign: 'left' }}>IP Adress</th>
+                <th style={{ width: '25%', padding: '12px', textAlign: 'left' }}>IP Address</th>
                 <th style={{ width: '25%', padding: '12px', textAlign: 'left' }}>Hostname</th>
                 <th style={{ width: '25%', padding: '12px', textAlign: 'left' }}>Open Ports</th>
                 <th style={{ width: '25%', padding: '12px', textAlign: 'left' }}>Services</th>
