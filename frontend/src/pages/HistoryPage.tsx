@@ -44,7 +44,7 @@ function HistoryPage() {
   const [statusFilter, setstatusFilter] = useState('ALL')
 
   const filteredScans = sampleScans.filter(scan => {
-    const matchesSearch = '${scan.target} ${scan.timestamp} ${scan.status}'.toLowerCase().includes(search.toLowerCase())
+    const matchesSearch = `${scan.target} ${scan.timestamp.toLocaleString()} ${scan.status}`.toLowerCase().includes(search.toLowerCase())
     const matchesStatus = statusFilter === 'ALL' || scan.status === statusFilter
     return matchesSearch && matchesStatus
   })
