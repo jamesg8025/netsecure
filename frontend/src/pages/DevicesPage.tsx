@@ -50,7 +50,7 @@ function DevicesPage() {
                 <tr key={device.ip}>
                   <td style={{ padding: '12px' }}>{device.ip}</td>
                   <td style={{ padding: '12px' }}>{device.Hostname}</td>
-                  <td style={{ padding: '12px' }}>{device.ports}</td>
+                  <td style={{ padding: '12px' }}>{device.ports.join(', ')}</td>
                   <td style={{ padding: '12px' }}>{device.Services.join(', ')}</td>
                 </tr>
               ))}
