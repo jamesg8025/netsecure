@@ -70,7 +70,7 @@ function HistoryPage() {
       />
 
       <section className= "mt-6">
-        <div className= "mb-4 flex flex-wrrap items-center gap-3">
+        <div className= "mb-4 flex flex-wrap items-center gap-3">
           <input
             type="text"
             placeholder="Search scans..."
