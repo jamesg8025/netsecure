@@ -27,7 +27,7 @@ for a 5-person senior project team. Full context lives in `docs/`:
 | Directory | Contents | Status |
 |-----------|----------|--------|
 | `/scanner` | Nmap integration, target validation, scan execution, result parsing | Scaffolded (`.gitkeep` only) |
-| `/backend` | Python/Django web app, REST API, security rule engine | Initialized — Django 6.1 project (`config/`), `api` app with `/api/health/` |
+| `/backend` | Python/Django web app, REST API, security rule engine | Initialized — Django 6.1 project (`config/`), `api` app with `/api/health/`, JSON error handling, request validation helpers |
 | `/database` | SQLite schema, migrations, data-access layer | Scaffolded (`.gitkeep` only) |
 | `/frontend` | React + TypeScript + Vite + Tailwind v4 dashboard | Initialized — boilerplate `App.tsx`, `main.tsx`, config files present |
 | `/docs` | SRS, project plan, architecture, design, roadmap, contributing guide | Active |
