@@ -6,10 +6,11 @@ from pathlib import Path
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.http import Http404, HttpResponse
-from django.test import Client, SimpleTestCase, override_settings
+from django.test import Client, RequestFactory, SimpleTestCase, override_settings
 from django.urls import include, path, reverse
 
 from .errors import ApiError
+from .validation import parse_json_body, require_string
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
 
@@ -37,6 +38,11 @@ def _html_error(request):
     return response
 
 
+def _require_target(request):
+    require_string(parse_json_body(request), 'target', max_length=255)
+    return HttpResponse(status=204)
+
+
 urlpatterns = [
     path('api/', include('api.urls')),
     path('api/test/api-error/', _raise_api_error),
@@ -44,6 +50,7 @@ urlpatterns = [
     path('api/test/permission-denied/', _raise_permission_denied),
     path('api/test/unexpected/', _raise_unexpected),
     path('api/test/html-error/', _html_error),
+    path('api/test/require-target/', _require_target),
     path('outside/unexpected/', _raise_unexpected),
 ]
 
@@ -149,6 +156,100 @@ class ApiErrorResponseTests(SimpleTestCase):
     def test_exceptions_outside_api_are_not_caught(self):
         with self.assertRaises(RuntimeError):
             self.client.get('/outside/unexpected/')
+
+
+class ParseJsonBodyTests(SimpleTestCase):
+    def _post(self, body, content_type='application/json'):
+        # CONTENT_TYPE is passed explicitly because RequestFactory omits it for empty bodies.
+        return RequestFactory().post('/api/scan/', data=body, content_type=content_type, CONTENT_TYPE=content_type)
+
+    def assertRaisesApiError(self, status, code, func, *args):
+        with self.assertRaises(ApiError) as ctx:
+            func(*args)
+        self.assertEqual((ctx.exception.status, ctx.exception.code), (status, code))
+        return ctx.exception
+
+    def test_returns_json_object_as_dict(self):
+        request = self._post('{"target": "192.168.1.0/24"}')
+
+        self.assertEqual(parse_json_body(request), {'target': '192.168.1.0/24'})
+
+    def test_accepts_content_type_with_charset(self):
+        request = self._post('{}', content_type='application/json; charset=utf-8')
+
+        self.assertEqual(parse_json_body(request), {})
+
+    def test_rejects_non_json_content_type(self):
+        request = self._post('target=10.0.0.1', content_type='application/x-www-form-urlencoded')
+
+        self.assertRaisesApiError(415, 'unsupported_media_type', parse_json_body, request)
+
+    def test_rejects_malformed_json(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post('{"target": '))
+
+    def test_rejects_empty_body(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(''))
+
+    def test_rejects_non_utf8_body(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(b'\xff\xfe'))
+
+    def test_rejects_json_that_is_not_an_object(self):
+        for body in ('[]', '"10.0.0.1"', '42', 'null'):
+            with self.subTest(body=body):
+                self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(body))
+
+    @override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=10)
+    def test_rejects_oversized_body(self):
+        request = self._post('{"target": "192.168.1.0/24"}')
+
+        self.assertRaisesApiError(413, 'payload_too_large', parse_json_body, request)
+
+
+class RequireStringTests(SimpleTestCase):
+    def assertFieldError(self, data, message):
+        with self.assertRaises(ApiError) as ctx:
+            require_string(data, 'target', max_length=10)
+        error = ctx.exception
+        self.assertEqual((error.status, error.code), (400, 'validation_error'))
+        self.assertEqual(error.details, {'field': 'target'})
+        self.assertEqual(error.message, message)
+
+    def test_returns_stripped_value(self):
+        self.assertEqual(require_string({'target': '  10.0.0.1 '}, 'target', max_length=10), '10.0.0.1')
+
+    def test_value_at_max_length_is_allowed(self):
+        self.assertEqual(require_string({'target': 'a' * 10}, 'target', max_length=10), 'a' * 10)
+
+    def test_missing_field(self):
+        self.assertFieldError({}, '"target" is required.')
+
+    def test_wrong_type(self):
+        for value in (None, 42, ['10.0.0.1'], {'ip': '10.0.0.1'}, True):
+            with self.subTest(value=value):
+                self.assertFieldError({'target': value}, '"target" must be a string.')
+
+    def test_blank_value(self):
+        for value in ('', '   ', '\t\n'):
+            with self.subTest(value=value):
+                self.assertFieldError({'target': value}, '"target" must not be empty.')
+
+    def test_too_long(self):
+        self.assertFieldError({'target': 'a' * 11}, '"target" must be at most 10 characters.')
+
+
+@override_settings(ROOT_URLCONF=__name__)
+class ValidationErrorResponseTests(SimpleTestCase):
+    def test_validation_error_reaches_client_as_json(self):
+        response = self.client.post('/api/test/require-target/', data={}, content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'error': {
+                'code': 'validation_error',
+                'message': '"target" is required.',
+                'details': {'field': 'target'},
+            },
+        })
 
 
 class ProjectConfigTests(SimpleTestCase):
