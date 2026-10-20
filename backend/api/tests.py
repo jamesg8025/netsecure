@@ -10,6 +10,7 @@ from django.test import Client, RequestFactory, SimpleTestCase, override_setting
 from django.urls import include, path, reverse
 
 from .errors import ApiError
+from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
@@ -39,7 +40,13 @@ def _html_error(request):
 
 
 def _require_target(request):
-    require_string(parse_json_body(request), 'target', max_length=255)
+    require_string(parse_json_body(request), 'target', max_length=MAX_TARGET_LENGTH)
+    return HttpResponse(status=204)
+
+
+def _validate_target(request):
+    target = require_string(parse_json_body(request), 'target', max_length=MAX_TARGET_LENGTH)
+    validate_scan_target(target)
     return HttpResponse(status=204)
 
 
@@ -51,6 +58,7 @@ urlpatterns = [
     path('api/test/unexpected/', _raise_unexpected),
     path('api/test/html-error/', _html_error),
     path('api/test/require-target/', _require_target),
+    path('api/test/validate-target/', _validate_target),
     path('outside/unexpected/', _raise_unexpected),
 ]
 
@@ -250,6 +258,42 @@ class ValidationErrorResponseTests(SimpleTestCase):
                 'details': {'field': 'target'},
             },
         })
+
+
+class ScanTargetPlaceholderTests(SimpleTestCase):
+    def test_rejects_every_target_until_scanner_validator_exists(self):
+        targets = [
+            '192.168.1.10',
+            '192.168.1.0/24',
+            'scanme.nmap.org',
+            '10.0.0.1; rm -rf /',
+            '-oN /tmp/out 10.0.0.1',
+        ]
+        for target in targets:
+            with self.subTest(target=target):
+                with self.assertRaises(ApiError) as ctx:
+                    validate_scan_target(target)
+                self.assertEqual(ctx.exception.status, 503)
+                self.assertEqual(ctx.exception.code, 'target_validation_unavailable')
+
+
+@override_settings(ROOT_URLCONF=__name__)
+class ScanTargetResponseTests(SimpleTestCase):
+    def test_placeholder_rejection_reaches_client_as_json_503(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': '192.168.1.0/24'}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()['error']['code'], 'target_validation_unavailable')
+
+    def test_request_shape_is_checked_before_target_validation(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': 'a' * (MAX_TARGET_LENGTH + 1)}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'validation_error')
 
 
 class ProjectConfigTests(SimpleTestCase):
