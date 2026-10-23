@@ -11,6 +11,8 @@ Author: Zachary Domingue
 import subprocess
 import xml.etree.ElementTree as ET
 
+from validator import validate_target, InvalidTargetError
+
 
 def run_scan(target):
     print(f"\nScanning {target}...")
@@ -23,10 +25,10 @@ def run_scan(target):
 
     if result.returncode == 0:
         return result.stdout
-    else:
-        print("Scan failed.")
-        print(result.stderr)
-        return None
+
+    print("Scan failed.")
+    print(result.stderr)
+    return None
 
 
 def parse_scan(xml_output):
@@ -129,14 +131,27 @@ def display_results(hosts):
                 print(f"    Version: {service['version']}")
 
 
+def scan_target(target):
+    try:
+        validated_target = validate_target(target)
+
+    except InvalidTargetError as error:
+        print(f"\nTarget rejected: {error}")
+        return []
+
+    xml_output = run_scan(validated_target)
+    hosts = parse_scan(xml_output)
+
+    return hosts
+
+
 def main():
     print("NetSecure Scanner")
     print("Scanner module initialized successfully.")
 
     target = "127.0.0.1"
 
-    xml_output = run_scan(target)
-    hosts = parse_scan(xml_output)
+    hosts = scan_target(target)
     display_results(hosts)
 
 
