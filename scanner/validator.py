@@ -17,6 +17,8 @@ class InvalidTargetError(ValueError):
 
 
 def validate_target(target):
+    if not isinstance(target, str):
+        raise InvalidTargetError("Target must be a valid IPv4 address or CIDR network.")
     target = target.strip()
 
     try:
@@ -31,12 +33,9 @@ def validate_target(target):
             "NetSecure currently supports IPv4 targets only."
         )
 
-    # Allow localhost for development/testing.
-    if network.network_address.is_loopback:
-        return target
-
-    # Only allow private/local networks.
-    if not network.network_address.is_private:
+    # Check the entire range against explicit RFC 1918 and loopback networks.
+    allowed = ("10.0.0.0/8", "172.16.0.0/12", "192.168.0.0/16", "127.0.0.0/8")
+    if not any(network.subnet_of(ipaddress.ip_network(item)) for item in allowed):
         raise InvalidTargetError(
             "NetSecure only allows authorized private network targets."
         )
@@ -47,7 +46,7 @@ def validate_target(target):
             "Target range is too large. Maximum size is 256 addresses."
         )
 
-    return target
+    return str(network) if "/" in target else str(network.network_address)
 
 
 def main():

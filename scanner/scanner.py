@@ -8,34 +8,55 @@ on authorized local networks.
 Author: Zachary Domingue
 """
 
+import argparse
 import subprocess
+import sys
 import xml.etree.ElementTree as ET
 
-from validator import validate_target, InvalidTargetError
+if __package__:
+    from .validator import validate_target, InvalidTargetError
+else:
+    from validator import validate_target, InvalidTargetError
+
+
+class ScanError(RuntimeError):
+    """Nmap execution or output could not be processed."""
 
 
 def run_scan(target):
+    target = validate_target(target)
     print(f"\nScanning {target}...")
 
-    result = subprocess.run(
-        ["nmap", "-sV", "-oX", "-", target],
-        capture_output=True,
-        text=True
-    )
+    try:
+        result = subprocess.run(
+            ["nmap", "-sV", "-oX", "-", target],
+            capture_output=True,
+            text=True,
+            timeout=300
+        )
+    except FileNotFoundError as error:
+        raise ScanError("Nmap was not found. Install Nmap and add it to PATH.") from error
+    except subprocess.TimeoutExpired as error:
+        raise ScanError("Nmap exceeded the 300-second scan limit.") from error
+    except OSError as error:
+        raise ScanError(f"Could not start Nmap: {error}") from error
 
     if result.returncode == 0:
         return result.stdout
 
-    print("Scan failed.")
-    print(result.stderr)
-    return None
+    raise ScanError(result.stderr.strip() or f"Nmap exited with code {result.returncode}.")
 
 
 def parse_scan(xml_output):
     if xml_output is None:
         return []
 
-    root = ET.fromstring(xml_output)
+    try:
+        root = ET.fromstring(xml_output)
+    except ET.ParseError as error:
+        raise ScanError("Nmap returned invalid XML.") from error
+    if root.tag != "nmaprun":
+        raise ScanError("Nmap output is missing its nmaprun root.")
 
     hosts = []
 
@@ -132,28 +153,34 @@ def display_results(hosts):
 
 
 def scan_target(target):
-    try:
-        validated_target = validate_target(target)
-
-    except InvalidTargetError as error:
-        print(f"\nTarget rejected: {error}")
-        return []
-
-    xml_output = run_scan(validated_target)
+    xml_output = run_scan(target)
     hosts = parse_scan(xml_output)
 
     return hosts
 
 
-def main():
+def main(argv=None):
+    parser = argparse.ArgumentParser(description="Scan an authorized private IPv4 address or subnet (maximum 256 addresses).")
+    parser.add_argument("target", nargs="?", help="Private IPv4 address or CIDR; omitted targets are prompted for")
+    args = parser.parse_args(argv)
     print("NetSecure Scanner")
     print("Scanner module initialized successfully.")
 
-    target = "127.0.0.1"
-
-    hosts = scan_target(target)
+    try:
+        target = args.target if args.target is not None else input("Authorized IPv4 address or subnet: ")
+        hosts = scan_target(target)
+    except InvalidTargetError as error:
+        print(f"Target rejected: {error}", file=sys.stderr)
+        return 2
+    except ScanError as error:
+        print(f"Scan failed: {error}", file=sys.stderr)
+        return 1
+    except (EOFError, KeyboardInterrupt):
+        print("\nScan cancelled.", file=sys.stderr)
+        return 130
     display_results(hosts)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

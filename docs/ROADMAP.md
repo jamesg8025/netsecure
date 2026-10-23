@@ -81,3 +81,14 @@ Check off items as they are completed. Each item shows its primary owner.
 ---
 
 **Target:** Project complete and presentation-ready by **November 20, 2026**.
+
+### Scanner progress — October 23, 2026
+
+WBS 3.0: CLI target input and private IPv4 validation are implemented on
+`feature/nmap-scanner`. Seven offline regression tests pass, including proof
+that rejected input never starts Nmap, loopback size limits, result parsing,
+and execution failures. Usage and the current result contract are documented
+in `scanner/README.md`. Public-target rejection was also checked through the CLI.
+Live Nmap scanning on this environment and Ubuntu verification remain pending;
+Nmap was unavailable on PATH. The provisional backend result contract still
+needs team agreement before integration. Broader roadmap items remain unchecked.
