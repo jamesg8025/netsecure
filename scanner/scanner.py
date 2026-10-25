@@ -57,8 +57,8 @@ def _nmap_error_message(result):
 
 
 def parse_scan(xml_output):
-    if xml_output is None:
-        return []
+    if not xml_output:
+        raise ScanError("Nmap produced no output.")
 
     try:
         root = ET.fromstring(xml_output)
