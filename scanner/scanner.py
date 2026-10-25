@@ -114,7 +114,7 @@ def parse_scan(xml_output):
 
             services.append(
                 {
-                    "port": int(port.get("portid")),
+                    "port": port_number,
                     "protocol": port.get("protocol"),
                     "service": service_name,
                     "product": product,
