@@ -96,6 +96,11 @@ def parse_scan(xml_output):
             if state is None or state.get("state") != "open":
                 continue
 
+            try:
+                port_number = int(port.get("portid"))
+            except (TypeError, ValueError) as error:
+                raise ScanError("Nmap output contains a port without a valid portid.") from error
+
             service = port.find("service")
 
             service_name = ""
