@@ -53,7 +53,22 @@ class ScannerTests(unittest.TestCase):
             with self.assertRaises(scanner.ScanError):
                 scanner.parse_scan(xml)
         self.assertEqual(scanner.parse_scan("<nmaprun/>"), [])
+        self.assertEqual(scanner.parse_scan("<nmaprun/>"), [])
 
+    def test_missing_output_and_bad_port_raise_scan_error(self):
+        for xml in (None, ""):
+            with self.assertRaises(scanner.ScanError):
+                scanner.parse_scan(xml)
+        bad_port = XML.replace(' portid="22"', "")
+        with self.assertRaises(scanner.ScanError):
+            scanner.parse_scan(bad_port)
+
+    def test_nonzero_exit_message_is_concise(self):
+        stderr = "Starting Nmap\nFailed to open device eth0\nQUITTING!\n"
+        with patch.object(scanner.subprocess, "run", return_value=subprocess.CompletedProcess([], 1, "", stderr)):
+            with self.assertRaises(scanner.ScanError) as caught:
+                scanner.run_scan("127.0.0.1")
+        self.assertEqual(str(caught.exception), "Nmap exited with code 1: Failed to open device eth0")
     def test_cli_public_target_is_error_not_empty_success(self):
         with patch.object(scanner.subprocess, "run") as run, contextlib.redirect_stdout(io.StringIO()) as output, contextlib.redirect_stderr(io.StringIO()) as error:
             self.assertEqual(scanner.main(["8.8.8.8"]), 2)
