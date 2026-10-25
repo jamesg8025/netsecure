@@ -44,7 +44,16 @@ def run_scan(target):
     if result.returncode == 0:
         return result.stdout
 
-    raise ScanError(result.stderr.strip() or f"Nmap exited with code {result.returncode}.")
+    raise ScanError(_nmap_error_message(result))
+
+
+def _nmap_error_message(result):
+    # Nmap ends fatal errors with "QUITTING!"; the line before it explains why.
+    lines = [line.strip() for line in result.stderr.splitlines() if line.strip()]
+    lines = [line for line in lines if line != "QUITTING!"]
+    if not lines:
+        return f"Nmap exited with code {result.returncode}."
+    return f"Nmap exited with code {result.returncode}: {lines[-1][:200]}"
 
 
 def parse_scan(xml_output):
