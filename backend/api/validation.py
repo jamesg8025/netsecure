@@ -23,7 +23,7 @@ def parse_json_body(request):
         raise ApiError(413, 'payload_too_large', 'Request body is too large.')
     try:
         data = json.loads(body)
-    except (UnicodeDecodeError, json.JSONDecodeError):
+    except (UnicodeDecodeError, json.JSONDecodeError, RecursionError):
         raise ApiError(400, 'invalid_json', 'Request body is not valid JSON.')
     if not isinstance(data, dict):
         raise ApiError(400, 'invalid_json', 'Request body must be a JSON object.')
