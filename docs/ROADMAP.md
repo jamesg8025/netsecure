@@ -18,10 +18,15 @@ Check off items as they are completed. Each item shows its primary owner.
 ## Phase 3 — Core Component Development · Sep 21–Oct 25
 
 ### Nmap Scanner (WBS 3.0) · Sep 21–Oct 18
-- [ ] Configure Nmap and scan profiles — **Zach**
-- [ ] Implement target validation (FR-02) — **Zach**
-- [ ] Host discovery and service detection — **Zach**
-- [ ] Structured output parsing (XML → dict) — **Zach**
+- [x] Configure Nmap and scan profiles — **Zach**
+- [x] Implement target validation (FR-02) — **Zach**
+- [x] Host discovery and service detection — **Zach**
+- [x] Structured output parsing (XML → dict) — **Zach**
+
+Scanner component implementation and Windows localhost verification completed
+October 29, 2026: 17 tests pass. See `SCANNER_HANDOFF.md` for the actual result
+contract and remaining team integration/Ubuntu acceptance checks. These scanner
+checkboxes do not mark whole-system testing or other owners' work complete.
 
 ### Backend Core (WBS 4.0) · Sep 21–Oct 25
 - [x] Create Django project structure, settings, URLs — **Austin**
