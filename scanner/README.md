@@ -20,6 +20,9 @@ rejected before any subprocess starts, including direct calls to `run_scan`.
 
 The default `basic` profile runs Nmap service detection (`-sV`); `discovery`
 runs host discovery only (`-sn`). Both use XML output and a 300-second timeout.
+Without root, Nmap discovers LAN hosts with TCP probes to ports 80/443 instead of
+ARP, so `discovery` can miss devices that expose neither port; run it with
+`sudo` on the demo VM if results look incomplete.
 Profiles are fixed argument lists; callers cannot supply arbitrary Nmap options.
 The basic profile uses Nmap's default port selection (not every possible port).
 Exit codes: 0 success, 1 scan failure, 2 invalid target,
