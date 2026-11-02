@@ -15,7 +15,11 @@ class LocalhostScanTests(unittest.TestCase):
         return hosts
 
     def test_basic_profile(self):
-        self.check_profile("basic")
+        hosts = self.check_profile("basic")
+        expected_port = os.environ.get("NETSECURE_LIVE_EXPECT_PORT")
+        if expected_port:
+            ports = {service["port"] for host in hosts for service in host["services"]}
+            self.assertIn(int(expected_port), ports)
 
     def test_discovery_profile(self):
         self.assertTrue(all(not host["services"] for host in self.check_profile("discovery")))

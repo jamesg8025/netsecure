@@ -20,7 +20,12 @@ jobs:
           python3 --version
           nmap --version
           cat /etc/os-release
+      - name: Start a localhost service for the live scan
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 >/dev/null 2>&1 &
+          sleep 1
       - name: Run regression and localhost smoke tests
         env:
           NETSECURE_LIVE_TESTS: '1'
+          NETSECURE_LIVE_EXPECT_PORT: '8080'
         run: python3 -m unittest discover -s tests -v
