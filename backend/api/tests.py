@@ -3,11 +3,64 @@ import subprocess
 import sys
 from pathlib import Path
 
+from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
-from django.test import SimpleTestCase
-from django.urls import reverse
+from django.http import Http404, HttpResponse
+from django.test import Client, RequestFactory, SimpleTestCase, override_settings
+from django.urls import include, path, reverse
+
+from .errors import ApiError
+from .targets import MAX_TARGET_LENGTH, validate_scan_target
+from .validation import parse_json_body, require_string
 
 BACKEND_DIR = Path(__file__).resolve().parent.parent
+
+
+# Views that fail on purpose, routed only while the error-handling tests run.
+def _raise_api_error(request):
+    raise ApiError(409, 'conflict_example', 'Something conflicted.', {'field': 'x'})
+
+
+def _raise_http404(request):
+    raise Http404('secret detail')
+
+
+def _raise_permission_denied(request):
+    raise PermissionDenied
+
+
+def _raise_unexpected(request):
+    raise RuntimeError('boom')
+
+
+def _html_error(request):
+    response = HttpResponse('<h1>Bad</h1>', status=400)
+    response['X-Custom'] = 'kept'
+    return response
+
+
+def _require_target(request):
+    require_string(parse_json_body(request), 'target', max_length=MAX_TARGET_LENGTH)
+    return HttpResponse(status=204)
+
+
+def _validate_target(request):
+    target = require_string(parse_json_body(request), 'target', max_length=MAX_TARGET_LENGTH)
+    validate_scan_target(target)
+    return HttpResponse(status=204)
+
+
+urlpatterns = [
+    path('api/', include('api.urls')),
+    path('api/test/api-error/', _raise_api_error),
+    path('api/test/http404/', _raise_http404),
+    path('api/test/permission-denied/', _raise_permission_denied),
+    path('api/test/unexpected/', _raise_unexpected),
+    path('api/test/html-error/', _html_error),
+    path('api/test/require-target/', _require_target),
+    path('api/test/validate-target/', _validate_target),
+    path('outside/unexpected/', _raise_unexpected),
+]
 
 
 class HealthEndpointTests(SimpleTestCase):
@@ -24,6 +77,223 @@ class HealthEndpointTests(SimpleTestCase):
         response = self.client.post(reverse('api:health'))
 
         self.assertEqual(response.status_code, 405)
+
+
+@override_settings(ROOT_URLCONF=__name__)
+class ApiErrorResponseTests(SimpleTestCase):
+    def assertApiError(self, response, status, code):
+        self.assertEqual(response.status_code, status)
+        self.assertEqual(response['Content-Type'], 'application/json')
+        self.assertEqual(response.json()['error']['code'], code)
+
+    def test_unknown_api_url_returns_json_404(self):
+        response = self.client.get('/api/does-not-exist/')
+
+        self.assertApiError(response, 404, 'not_found')
+        self.assertEqual(response.json(), {'error': {'code': 'not_found', 'message': 'Not Found.'}})
+
+    @override_settings(DEBUG=True)
+    def test_unknown_api_url_returns_json_404_in_debug(self):
+        # DEBUG turns on Django's console logging; capture it to keep test output clean.
+        with self.assertLogs('django.request', level='WARNING'):
+            response = self.client.get('/api/does-not-exist/')
+
+        self.assertApiError(response, 404, 'not_found')
+
+    def test_wrong_method_returns_json_405_with_allow_header(self):
+        response = self.client.post(reverse('api:health'))
+
+        self.assertApiError(response, 405, 'method_not_allowed')
+        self.assertEqual(response['Allow'], 'GET')
+
+    def test_csrf_failure_returns_json_403(self):
+        client = Client(enforce_csrf_checks=True)
+
+        response = client.post(reverse('api:health'))
+
+        self.assertApiError(response, 403, 'forbidden')
+
+    def test_api_error_uses_its_status_code_message_and_details(self):
+        response = self.client.get('/api/test/api-error/')
+
+        self.assertEqual(response.status_code, 409)
+        self.assertEqual(response.json(), {
+            'error': {
+                'code': 'conflict_example',
+                'message': 'Something conflicted.',
+                'details': {'field': 'x'},
+            },
+        })
+
+    def test_http404_does_not_leak_its_message(self):
+        response = self.client.get('/api/test/http404/')
+
+        self.assertApiError(response, 404, 'not_found')
+        self.assertNotIn('secret detail', response.content.decode())
+
+    def test_permission_denied_returns_json_403(self):
+        response = self.client.get('/api/test/permission-denied/')
+
+        self.assertApiError(response, 403, 'forbidden')
+
+    def test_unexpected_exception_returns_generic_json_500_and_logs(self):
+        with self.assertLogs('api.errors', level='ERROR') as logs:
+            response = self.client.get('/api/test/unexpected/')
+
+        self.assertApiError(response, 500, 'internal_error')
+        self.assertNotIn('boom', response.content.decode())
+        self.assertIn('RuntimeError: boom', logs.output[0])
+
+    def test_html_error_response_is_rewritten_keeping_headers(self):
+        response = self.client.get('/api/test/html-error/')
+
+        self.assertApiError(response, 400, 'bad_request')
+        self.assertEqual(response['X-Custom'], 'kept')
+
+    def test_security_headers_still_applied_to_json_errors(self):
+        response = self.client.get('/api/does-not-exist/')
+
+        self.assertEqual(response['X-Content-Type-Options'], 'nosniff')
+
+    def test_paths_outside_api_are_untouched(self):
+        response = self.client.get('/outside/missing/')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertFalse(response['Content-Type'].startswith('application/json'))
+
+    def test_exceptions_outside_api_are_not_caught(self):
+        with self.assertRaises(RuntimeError):
+            self.client.get('/outside/unexpected/')
+
+
+class ParseJsonBodyTests(SimpleTestCase):
+    def _post(self, body, content_type='application/json'):
+        # CONTENT_TYPE is passed explicitly because RequestFactory omits it for empty bodies.
+        return RequestFactory().post('/api/scan/', data=body, content_type=content_type, CONTENT_TYPE=content_type)
+
+    def assertRaisesApiError(self, status, code, func, *args):
+        with self.assertRaises(ApiError) as ctx:
+            func(*args)
+        self.assertEqual((ctx.exception.status, ctx.exception.code), (status, code))
+        return ctx.exception
+
+    def test_returns_json_object_as_dict(self):
+        request = self._post('{"target": "192.168.1.0/24"}')
+
+        self.assertEqual(parse_json_body(request), {'target': '192.168.1.0/24'})
+
+    def test_accepts_content_type_with_charset(self):
+        request = self._post('{}', content_type='application/json; charset=utf-8')
+
+        self.assertEqual(parse_json_body(request), {})
+
+    def test_rejects_non_json_content_type(self):
+        request = self._post('target=10.0.0.1', content_type='application/x-www-form-urlencoded')
+
+        self.assertRaisesApiError(415, 'unsupported_media_type', parse_json_body, request)
+
+    def test_rejects_malformed_json(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post('{"target": '))
+
+    def test_rejects_empty_body(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(''))
+
+    def test_rejects_non_utf8_body(self):
+        self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(b'\xff\xfe'))
+
+    def test_rejects_json_that_is_not_an_object(self):
+        for body in ('[]', '"10.0.0.1"', '42', 'null'):
+            with self.subTest(body=body):
+                self.assertRaisesApiError(400, 'invalid_json', parse_json_body, self._post(body))
+
+    @override_settings(DATA_UPLOAD_MAX_MEMORY_SIZE=10)
+    def test_rejects_oversized_body(self):
+        request = self._post('{"target": "192.168.1.0/24"}')
+
+        self.assertRaisesApiError(413, 'payload_too_large', parse_json_body, request)
+
+
+class RequireStringTests(SimpleTestCase):
+    def assertFieldError(self, data, message):
+        with self.assertRaises(ApiError) as ctx:
+            require_string(data, 'target', max_length=10)
+        error = ctx.exception
+        self.assertEqual((error.status, error.code), (400, 'validation_error'))
+        self.assertEqual(error.details, {'field': 'target'})
+        self.assertEqual(error.message, message)
+
+    def test_returns_stripped_value(self):
+        self.assertEqual(require_string({'target': '  10.0.0.1 '}, 'target', max_length=10), '10.0.0.1')
+
+    def test_value_at_max_length_is_allowed(self):
+        self.assertEqual(require_string({'target': 'a' * 10}, 'target', max_length=10), 'a' * 10)
+
+    def test_missing_field(self):
+        self.assertFieldError({}, '"target" is required.')
+
+    def test_wrong_type(self):
+        for value in (None, 42, ['10.0.0.1'], {'ip': '10.0.0.1'}, True):
+            with self.subTest(value=value):
+                self.assertFieldError({'target': value}, '"target" must be a string.')
+
+    def test_blank_value(self):
+        for value in ('', '   ', '\t\n'):
+            with self.subTest(value=value):
+                self.assertFieldError({'target': value}, '"target" must not be empty.')
+
+    def test_too_long(self):
+        self.assertFieldError({'target': 'a' * 11}, '"target" must be at most 10 characters.')
+
+
+@override_settings(ROOT_URLCONF=__name__)
+class ValidationErrorResponseTests(SimpleTestCase):
+    def test_validation_error_reaches_client_as_json(self):
+        response = self.client.post('/api/test/require-target/', data={}, content_type='application/json')
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json(), {
+            'error': {
+                'code': 'validation_error',
+                'message': '"target" is required.',
+                'details': {'field': 'target'},
+            },
+        })
+
+
+class ScanTargetPlaceholderTests(SimpleTestCase):
+    def test_rejects_every_target_until_scanner_validator_exists(self):
+        targets = [
+            '192.168.1.10',
+            '192.168.1.0/24',
+            'scanme.nmap.org',
+            '10.0.0.1; rm -rf /',
+            '-oN /tmp/out 10.0.0.1',
+        ]
+        for target in targets:
+            with self.subTest(target=target):
+                with self.assertRaises(ApiError) as ctx:
+                    validate_scan_target(target)
+                self.assertEqual(ctx.exception.status, 503)
+                self.assertEqual(ctx.exception.code, 'target_validation_unavailable')
+
+
+@override_settings(ROOT_URLCONF=__name__)
+class ScanTargetResponseTests(SimpleTestCase):
+    def test_placeholder_rejection_reaches_client_as_json_503(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': '192.168.1.0/24'}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 503)
+        self.assertEqual(response.json()['error']['code'], 'target_validation_unavailable')
+
+    def test_request_shape_is_checked_before_target_validation(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': 'a' * (MAX_TARGET_LENGTH + 1)}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'validation_error')
 
 
 class ProjectConfigTests(SimpleTestCase):

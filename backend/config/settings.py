@@ -58,6 +58,9 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # Placed after SecurityMiddleware so its headers still apply to the JSON
+    # errors, and ahead of the rest so it can convert their error responses.
+    'api.errors.ApiErrorMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
