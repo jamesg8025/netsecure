@@ -97,3 +97,12 @@ in `scanner/README.md`. Public-target rejection was also checked through the CLI
 Live Nmap scanning on this environment and Ubuntu verification remain pending;
 Nmap was unavailable on PATH. The provisional backend result contract still
 needs team agreement before integration. Broader roadmap items remain unchecked.
+
+### Integration progress — November 1, 2026
+
+WBS 8.0 first slice (#9): `POST /api/scans/` validates the target through
+`scanner.validator` (FR-02) and returns the scanner's host/service list; the
+New Scan page calls it and shows a scanning state, results, and errors. Scans
+run synchronously and nothing is persisted yet. Database storage (WBS 5.0),
+background jobs, and auth (WBS 9.0) remain open, so no roadmap boxes are
+checked by this change.
