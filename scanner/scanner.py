@@ -9,6 +9,8 @@ Author: Zachary Domingue
 """
 
 import argparse
+import ipaddress
+import json
 import subprocess
 import sys
 import xml.etree.ElementTree as ET
@@ -23,13 +25,20 @@ class ScanError(RuntimeError):
     """Nmap execution or output could not be processed."""
 
 
-def run_scan(target):
+SCAN_PROFILES = {
+    "basic": ("-sV",),
+    "discovery": ("-sn",),
+}
+
+
+def run_scan(target, *, profile="basic"):
     target = validate_target(target)
-    print(f"\nScanning {target}...")
+    if profile not in SCAN_PROFILES:
+        raise ValueError("Unknown scan profile. Choose basic or discovery.")
 
     try:
         result = subprocess.run(
-            ["nmap", "-sV", "-oX", "-", target],
+            ["nmap", *SCAN_PROFILES[profile], "-oX", "-", target],
             capture_output=True,
             text=True,
             timeout=300
@@ -66,6 +75,9 @@ def parse_scan(xml_output):
         raise ScanError("Nmap returned invalid XML.") from error
     if root.tag != "nmaprun":
         raise ScanError("Nmap output is missing its nmaprun root.")
+    finished = root.find("runstats/finished")
+    if finished is not None and finished.get("exit") == "error":
+        raise ScanError("Nmap reported an unsuccessful scan in its XML output.")
 
     hosts = []
 
@@ -80,6 +92,10 @@ def parse_scan(xml_output):
         for address in host.findall("address"):
             if address.get("addrtype") == "ipv4":
                 ip_address = address.get("addr")
+        try:
+            ip_address = str(ipaddress.IPv4Address(ip_address))
+        except ipaddress.AddressValueError as error:
+            raise ScanError("Nmap output contains an active host without a valid IPv4 address.") from error
 
         hostname = ""
 
@@ -100,6 +116,8 @@ def parse_scan(xml_output):
                 port_number = int(port.get("portid"))
             except (TypeError, ValueError) as error:
                 raise ScanError("Nmap output contains a port without a valid portid.") from error
+            if not 0 <= port_number <= 65535 or port.get("protocol") not in ("tcp", "udp", "sctp"):
+                raise ScanError("Nmap output contains an invalid port or protocol.")
 
             service = port.find("service")
 
@@ -166,8 +184,8 @@ def display_results(hosts):
                 print(f"    Version: {service['version']}")
 
 
-def scan_target(target):
-    xml_output = run_scan(target)
+def scan_target(target, *, profile="basic"):
+    xml_output = run_scan(target, profile=profile)
     hosts = parse_scan(xml_output)
 
     return hosts
@@ -176,13 +194,16 @@ def scan_target(target):
 def main(argv=None):
     parser = argparse.ArgumentParser(description="Scan an authorized private IPv4 address or subnet (maximum 256 addresses).")
     parser.add_argument("target", nargs="?", help="Private IPv4 address or CIDR; omitted targets are prompted for")
+    parser.add_argument("--profile", choices=SCAN_PROFILES, default="basic", help="basic: ports/services; discovery: active hosts only")
+    parser.add_argument("--json", action="store_true", help="Write structured results as JSON to stdout")
     args = parser.parse_args(argv)
-    print("NetSecure Scanner")
-    print("Scanner module initialized successfully.")
+    print("NetSecure Scanner", file=sys.stderr)
 
     try:
-        target = args.target if args.target is not None else input("Authorized IPv4 address or subnet: ")
-        hosts = scan_target(target)
+        if args.target is None:
+            print("Authorized IPv4 address or subnet: ", end="", file=sys.stderr, flush=True)
+        target = args.target if args.target is not None else input()
+        hosts = scan_target(target, profile=args.profile)
     except InvalidTargetError as error:
         print(f"Target rejected: {error}", file=sys.stderr)
         return 2
@@ -192,7 +213,10 @@ def main(argv=None):
     except (EOFError, KeyboardInterrupt):
         print("\nScan cancelled.", file=sys.stderr)
         return 130
-    display_results(hosts)
+    if args.json:
+        print(json.dumps(hosts, indent=2))
+    else:
+        display_results(hosts)
     return 0
 
 

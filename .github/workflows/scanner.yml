@@ -1,0 +1,31 @@
+name: Scanner checks
+on:
+  push:
+    branches: ['scanner/**']
+    paths: ['scanner/**', 'tests/test_scanner*.py', '.github/workflows/scanner.yml']
+  pull_request:
+    paths: ['scanner/**', 'tests/test_scanner*.py', '.github/workflows/scanner.yml']
+permissions:
+  contents: read
+jobs:
+  scanner:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install Nmap
+        run: sudo apt-get update && sudo apt-get install -y nmap
+      - name: Record environment
+        run: |
+          python3 --version
+          nmap --version
+          cat /etc/os-release
+      - name: Start a localhost service for the live scan
+        run: |
+          python3 -m http.server 8080 --bind 127.0.0.1 >/dev/null 2>&1 &
+          sleep 1
+      - name: Run regression and localhost smoke tests
+        env:
+          NETSECURE_LIVE_TESTS: '1'
+          NETSECURE_LIVE_EXPECT_PORT: '8080'
+        run: python3 -m unittest discover -s tests -v
