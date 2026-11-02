@@ -260,32 +260,52 @@ class ValidationErrorResponseTests(SimpleTestCase):
         })
 
 
-class ScanTargetPlaceholderTests(SimpleTestCase):
-    def test_rejects_every_target_until_scanner_validator_exists(self):
+class ScanTargetValidationTests(SimpleTestCase):
+    def test_allowed_targets_are_normalized(self):
+        cases = {
+            '192.168.1.10': '192.168.1.10',
+            '192.168.1.0/24': '192.168.1.0/24',
+            '192.168.1.7/24': '192.168.1.0/24',
+            '127.0.0.1': '127.0.0.1',
+        }
+        for target, expected in cases.items():
+            with self.subTest(target=target):
+                self.assertEqual(validate_scan_target(target), expected)
+
+    def test_rejects_unsafe_targets_as_400(self):
         targets = [
-            '192.168.1.10',
-            '192.168.1.0/24',
+            '8.8.8.8',
+            '10.0.0.0/8',
             'scanme.nmap.org',
             '10.0.0.1; rm -rf /',
             '-oN /tmp/out 10.0.0.1',
+            '::1',
         ]
         for target in targets:
             with self.subTest(target=target):
                 with self.assertRaises(ApiError) as ctx:
                     validate_scan_target(target)
-                self.assertEqual(ctx.exception.status, 503)
-                self.assertEqual(ctx.exception.code, 'target_validation_unavailable')
+                self.assertEqual(ctx.exception.status, 400)
+                self.assertEqual(ctx.exception.code, 'invalid_target')
+                self.assertEqual(ctx.exception.details, {'field': 'target'})
 
 
 @override_settings(ROOT_URLCONF=__name__)
 class ScanTargetResponseTests(SimpleTestCase):
-    def test_placeholder_rejection_reaches_client_as_json_503(self):
+    def test_rejection_reaches_client_as_json_400(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': '8.8.8.8'}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'invalid_target')
+
+    def test_allowed_target_passes(self):
         response = self.client.post(
             '/api/test/validate-target/', data={'target': '192.168.1.0/24'}, content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()['error']['code'], 'target_validation_unavailable')
+        self.assertEqual(response.status_code, 204)
 
     def test_request_shape_is_checked_before_target_validation(self):
         response = self.client.post(
