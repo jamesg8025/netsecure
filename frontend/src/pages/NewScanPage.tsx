@@ -1,17 +1,34 @@
 import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
+import { startScan, type ScanResponse } from '../api/client'
 
 
 function NewScanPage() {
   const [target, setTarget] = useState('')
   const [status, setStatus] = useState('')
+  const [error, setError] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [result, setResult] = useState<ScanResponse | null>(null)
 
-  function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
+    if (scanning) return
 
-    setStatus(
-      `Target ${target} is ready to scan. Backend integration pending.`
-    )
+    setScanning(true)
+    setError('')
+    setResult(null)
+    setStatus(`Scanning ${target}… this can take a few minutes.`)
+    try {
+      const scan = await startScan(target)
+      setResult(scan)
+      const count = scan.hosts.length
+      setStatus(`Scan of ${scan.target} complete: ${count} active host${count === 1 ? '' : 's'} found.`)
+    } catch (err) {
+      setStatus('')
+      setError(err instanceof Error ? err.message : 'Scan failed.')
+    } finally {
+      setScanning(false)
+    }
   }
 
   return (
@@ -39,9 +56,13 @@ function NewScanPage() {
               value={target}
               onChange={(e) => { 
                 setTarget(e.target.value); 
-                setStatus(''); 
+                if (!scanning) {
+                  setStatus('');
+                  setError('');
+                }
               }}
               required
+              disabled={scanning}
               style ={{
                 width: '100%',
                 padding: '10px',
@@ -50,13 +71,14 @@ function NewScanPage() {
             />
           </div>
 
-          <button type="submit" style ={{
+          <button type="submit" disabled={scanning} style ={{
             padding: '10px 20px',
             backgroundColor: '#0f172a',
             color: 'white',
             border: 'none',
             borderRadius: '6px',
-            cursor: 'pointer',
+            cursor: scanning ? 'wait' : 'pointer',
+            opacity: scanning ? 0.7 : 1,
             transition: 'background-color 0.15s, transform 0.1s',
            }}
            onMouseEnter={(e) => {
@@ -74,7 +96,7 @@ function NewScanPage() {
             e.currentTarget.style.transform = 'scale(1)';
            }}
            >
-            Start Scan
+            {scanning ? 'Scanning…' : 'Start Scan'}
           </button>
         </form>
 
@@ -82,6 +104,36 @@ function NewScanPage() {
           <p role="status" style={{ marginTop: '20px' }}>
             {status}
           </p>
+        )}
+
+        {error && (
+          <p role="alert" style={{ marginTop: '20px', color: '#b91c1c' }}>
+            {error}
+          </p>
+        )}
+
+        {result && result.hosts.length > 0 && (
+          <ul aria-label="Scan results" style={{ marginTop: '20px' }}>
+            {result.hosts.map((host) => (
+              <li key={host.ip} style={{ marginBottom: '16px' }}>
+                <strong>{host.ip}</strong>
+                {host.hostname && ` (${host.hostname})`}
+                {host.services.length === 0 ? (
+                  <p>No open services detected.</p>
+                ) : (
+                  <ul style={{ paddingLeft: '20px' }}>
+                    {host.services.map((svc) => (
+                      <li key={`${svc.protocol}/${svc.port}`}>
+                        {svc.port}/{svc.protocol} {svc.service}
+                        {(svc.product || svc.version) &&
+                          ` — ${[svc.product, svc.version].filter(Boolean).join(' ')}`}
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </li>
+            ))}
+          </ul>
         )}
       </section>
     </>
