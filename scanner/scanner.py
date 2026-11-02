@@ -34,7 +34,7 @@ SCAN_PROFILES = {
 def run_scan(target, *, profile="basic"):
     target = validate_target(target)
     if profile not in SCAN_PROFILES:
-        raise ScanError("Unknown scan profile. Choose basic or discovery.")
+        raise ValueError("Unknown scan profile. Choose basic or discovery.")
 
     try:
         result = subprocess.run(

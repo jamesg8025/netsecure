@@ -91,7 +91,7 @@ class ScannerTests(unittest.TestCase):
 
     def test_profile_cannot_inject_options_or_bypass_validation(self):
         with patch.object(scanner.subprocess, "run") as run:
-            with self.assertRaises(scanner.ScanError):
+            with self.assertRaises(ValueError):
                 scanner.run_scan("127.0.0.1", profile="-A")
             with self.assertRaises(InvalidTargetError):
                 scanner.run_scan("8.8.8.8", profile="discovery")
