@@ -27,9 +27,9 @@ for a 5-person senior project team. Full context lives in `docs/`:
 | Directory | Contents | Status |
 |-----------|----------|--------|
 | `/scanner` | Nmap integration, target validation, scan execution, result parsing | Scaffolded (`.gitkeep` only) |
-| `/backend` | Python/Django web app, REST API, security rule engine | Initialized — Django 6.1 project (`config/`), `api` app with `/api/health/`, JSON error handling, request validation helpers |
+| `/backend` | Python/Django web app, REST API, security rule engine | Initialized — Django 6.1 project (`config/`), `api` app with `/api/health/`, `/api/csrf/`, synchronous `POST /api/scans/` (validated via the scanner), JSON error handling, request validation helpers |
 | `/database` | SQLite schema, migrations, data-access layer | Scaffolded (`.gitkeep` only) |
-| `/frontend` | React + TypeScript + Vite + Tailwind v4 dashboard | Dashboard shell — routed placeholder pages, `/api` dev proxy, backend health indicator |
+| `/frontend` | React + TypeScript + Vite + Tailwind v4 dashboard | Dashboard shell — routed pages, `/api` dev proxy, backend health indicator; New Scan calls `POST /api/scans/` and lists results |
 | `/docs` | SRS, project plan, architecture, design, roadmap, contributing guide | Active |
 
 ## Critical Safety Rule

@@ -2,12 +2,15 @@ import os
 import subprocess
 import sys
 from pathlib import Path
+from unittest import mock
 
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.http import Http404, HttpResponse
 from django.test import Client, RequestFactory, SimpleTestCase, override_settings
 from django.urls import include, path, reverse
+
+from scanner.scanner import ScanError
 
 from .errors import ApiError
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
@@ -260,32 +263,52 @@ class ValidationErrorResponseTests(SimpleTestCase):
         })
 
 
-class ScanTargetPlaceholderTests(SimpleTestCase):
-    def test_rejects_every_target_until_scanner_validator_exists(self):
+class ScanTargetValidationTests(SimpleTestCase):
+    def test_allowed_targets_are_normalized(self):
+        cases = {
+            '192.168.1.10': '192.168.1.10',
+            '192.168.1.0/24': '192.168.1.0/24',
+            '192.168.1.7/24': '192.168.1.0/24',
+            '127.0.0.1': '127.0.0.1',
+        }
+        for target, expected in cases.items():
+            with self.subTest(target=target):
+                self.assertEqual(validate_scan_target(target), expected)
+
+    def test_rejects_unsafe_targets_as_400(self):
         targets = [
-            '192.168.1.10',
-            '192.168.1.0/24',
+            '8.8.8.8',
+            '10.0.0.0/8',
             'scanme.nmap.org',
             '10.0.0.1; rm -rf /',
             '-oN /tmp/out 10.0.0.1',
+            '::1',
         ]
         for target in targets:
             with self.subTest(target=target):
                 with self.assertRaises(ApiError) as ctx:
                     validate_scan_target(target)
-                self.assertEqual(ctx.exception.status, 503)
-                self.assertEqual(ctx.exception.code, 'target_validation_unavailable')
+                self.assertEqual(ctx.exception.status, 400)
+                self.assertEqual(ctx.exception.code, 'invalid_target')
+                self.assertEqual(ctx.exception.details, {'field': 'target'})
 
 
 @override_settings(ROOT_URLCONF=__name__)
 class ScanTargetResponseTests(SimpleTestCase):
-    def test_placeholder_rejection_reaches_client_as_json_503(self):
+    def test_rejection_reaches_client_as_json_400(self):
+        response = self.client.post(
+            '/api/test/validate-target/', data={'target': '8.8.8.8'}, content_type='application/json'
+        )
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'invalid_target')
+
+    def test_allowed_target_passes(self):
         response = self.client.post(
             '/api/test/validate-target/', data={'target': '192.168.1.0/24'}, content_type='application/json'
         )
 
-        self.assertEqual(response.status_code, 503)
-        self.assertEqual(response.json()['error']['code'], 'target_validation_unavailable')
+        self.assertEqual(response.status_code, 204)
 
     def test_request_shape_is_checked_before_target_validation(self):
         response = self.client.post(
@@ -294,6 +317,100 @@ class ScanTargetResponseTests(SimpleTestCase):
 
         self.assertEqual(response.status_code, 400)
         self.assertEqual(response.json()['error']['code'], 'validation_error')
+
+
+class CsrfEndpointTests(SimpleTestCase):
+    def test_returns_token_and_sets_cookie(self):
+        response = self.client.get(reverse('api:csrf'))
+
+        self.assertEqual(response.status_code, 200)
+        self.assertTrue(response.json()['csrfToken'])
+        self.assertIn('csrftoken', response.cookies)
+
+    def test_token_allows_post_with_csrf_enforced(self):
+        client = Client(enforce_csrf_checks=True)
+        token = client.get(reverse('api:csrf')).json()['csrfToken']
+
+        with mock.patch('api.views.scan_target', return_value=[]):
+            response = client.post(
+                reverse('api:scans'), data={'target': '127.0.0.1'},
+                content_type='application/json', HTTP_X_CSRFTOKEN=token,
+            )
+
+        self.assertEqual(response.status_code, 200)
+
+
+class ScanEndpointTests(SimpleTestCase):
+    HOSTS = [{
+        'ip': '192.168.1.1',
+        'hostname': 'router',
+        'services': [{'port': 80, 'protocol': 'tcp', 'service': 'http', 'product': '', 'version': ''}],
+    }]
+
+    def _post(self, data):
+        return self.client.post(reverse('api:scans'), data=data, content_type='application/json')
+
+    def test_url_is_under_api_prefix(self):
+        self.assertEqual(reverse('api:scans'), '/api/scans/')
+
+    @mock.patch('api.views.scan_target')
+    def test_returns_scanner_results(self, scan_target):
+        scan_target.return_value = self.HOSTS
+
+        response = self._post({'target': ' 192.168.1.1 '})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {'target': '192.168.1.1', 'profile': 'basic', 'hosts': self.HOSTS})
+        scan_target.assert_called_once_with('192.168.1.1', profile='basic')
+
+    @mock.patch('api.views.scan_target', return_value=[])
+    def test_passes_normalized_target_and_profile(self, scan_target):
+        response = self._post({'target': '192.168.1.7/24', 'profile': 'discovery'})
+
+        self.assertEqual(response.status_code, 200)
+        scan_target.assert_called_once_with('192.168.1.0/24', profile='discovery')
+
+    @mock.patch('api.views.scan_target')
+    def test_rejected_target_never_reaches_scanner(self, scan_target):
+        for target in ('8.8.8.8', '10.0.0.1; rm -rf /', '-oN /tmp/out 10.0.0.1', 'scanme.nmap.org'):
+            with self.subTest(target=target):
+                response = self._post({'target': target})
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['error']['code'], 'invalid_target')
+        scan_target.assert_not_called()
+
+    @mock.patch('api.views.scan_target')
+    def test_missing_target_is_400(self, scan_target):
+        response = self._post({})
+
+        self.assertEqual(response.status_code, 400)
+        self.assertEqual(response.json()['error']['code'], 'validation_error')
+        scan_target.assert_not_called()
+
+    @mock.patch('api.views.scan_target')
+    def test_unknown_profile_is_400(self, scan_target):
+        for profile in ('aggressive', '-sS', None, 1, ['basic']):
+            with self.subTest(profile=profile):
+                response = self._post({'target': '192.168.1.1', 'profile': profile})
+
+                self.assertEqual(response.status_code, 400)
+                self.assertEqual(response.json()['error']['details'], {'field': 'profile'})
+        scan_target.assert_not_called()
+
+    @mock.patch('api.views.scan_target', side_effect=ScanError('Nmap was not found. Install Nmap and add it to PATH.'))
+    def test_scan_failure_is_502_with_reason(self, scan_target):
+        response = self._post({'target': '192.168.1.1'})
+
+        self.assertEqual(response.status_code, 502)
+        self.assertEqual(response.json(), {
+            'error': {'code': 'scan_failed', 'message': 'Nmap was not found. Install Nmap and add it to PATH.'},
+        })
+
+    def test_get_is_rejected(self):
+        response = self.client.get(reverse('api:scans'))
+
+        self.assertEqual(response.status_code, 405)
 
 
 class ProjectConfigTests(SimpleTestCase):
