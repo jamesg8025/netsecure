@@ -1,12 +1,13 @@
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods
 
 from scanner.scanner import SCAN_PROFILES, ScanError, scan_target
 
 from . import scan_store
 from .errors import ApiError
+from .models import Scan
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
 
@@ -24,8 +25,26 @@ def csrf(request):
     return JsonResponse({'csrfToken': get_token(request)})
 
 
-@require_POST
+@require_http_methods(['GET', 'POST'])
 def scans(request):
+    """GET lists saved scans (history); POST runs a new scan."""
+    if request.method == 'GET':
+        return _list_scans(request)
+    return _start_scan(request)
+
+
+def _list_scans(request):
+    """
+    Scan history, newest first (UC-05).
+
+    Each scan has its target, profile, status, start/finish times, error
+    message (failed scans), and device and finding counts. Every scan is listed
+    until login exists (WBS 9.0); then this must pass request.user.
+    """
+    return JsonResponse({'scans': scan_store.scan_history()})
+
+
+def _start_scan(request):
     """
     Run a scan, save it, and return its results.
 
@@ -70,3 +89,26 @@ def scans(request):
         raise
 
     return JsonResponse({'scan_id': scan.scan_id, 'target': target, 'profile': profile, 'hosts': hosts})
+
+
+def _require_scan(scan_id):
+    """404 for a scan that doesn't exist. Ownership checks come with login (WBS 9.0)."""
+    if not Scan.objects.filter(pk=scan_id).exists():
+        raise ApiError(404, 'scan_not_found', 'Scan not found.')
+
+
+@require_GET
+def scan_devices(request, scan_id):
+    """
+    Devices found by one scan (UC-03): one row per open service, plus one row
+    for each host with no open services (all service fields null).
+    """
+    _require_scan(scan_id)
+    return JsonResponse({'scan_id': scan_id, 'devices': scan_store.scan_devices(scan_id)})
+
+
+@require_GET
+def scan_findings(request, scan_id):
+    """Security findings for one scan, most severe first (UC-04, FR-05, FR-06)."""
+    _require_scan(scan_id)
+    return JsonResponse({'scan_id': scan_id, 'findings': scan_store.scan_findings(scan_id)})

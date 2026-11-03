@@ -414,10 +414,10 @@ class ScanEndpointTests(TestCase):
             'error': {'code': 'scan_failed', 'message': 'Nmap was not found. Install Nmap and add it to PATH.'},
         })
 
-    def test_get_is_rejected(self):
-        response = self.client.get(reverse('api:scans'))
-
-        self.assertEqual(response.status_code, 405)
+    def test_other_methods_are_rejected(self):
+        for method in (self.client.put, self.client.delete, self.client.patch):
+            with self.subTest(method=method.__name__):
+                self.assertEqual(method(reverse('api:scans')).status_code, 405)
 
     @mock.patch('api.views.scan_target')
     def test_completed_scan_and_results_are_saved(self, scan_target):

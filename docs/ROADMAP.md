@@ -30,7 +30,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 
 ### Backend Core (WBS 4.0) · Sep 21–Oct 25
 - [x] Create Django project structure, settings, URLs — **Austin**
-- [ ] REST API routes for scan, devices, findings, history — **Austin**
+- [x] REST API routes for scan, devices, findings, history — **Austin**
 - [ ] Scan control: initiate, track status, return results — **Austin**
 - [ ] Input validation and error handling — **Austin**
 
@@ -118,3 +118,10 @@ including failures with their reason (FR-03, NFR-04). Scans have no owner
 until login exists (WBS 9.0). Still open: API routes and frontend pages for
 history/devices/findings, storing rule-engine findings (WBS 7.0), and
 background jobs (NFR-02).
+
+### Integration progress — November 2, 2026
+
+WBS 4.0/8.0: read endpoints for saved scans: `GET /api/scans/` (history),
+`GET /api/scans/{id}/devices/`, and `GET /api/scans/{id}/findings/`, listed in
+`ARCHITECTURE.md` under API Endpoints. Every scan is visible until login exists
+(WBS 9.0). Next: the frontend History, Devices, and Findings pages (WBS 6.0).
