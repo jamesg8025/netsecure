@@ -65,6 +65,9 @@ db.sqlite3
 db.sqlite3-journal
 *.db
 *.sqlite3
+# SQLite journal / WAL / SHM files (database/README.md)
+*.db-*
+*.sqlite3-*
 
 # Flask stuff:
 instance/
