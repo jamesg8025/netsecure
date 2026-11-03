@@ -76,12 +76,12 @@ function HistoryPage() {
             placeholder="Search scans..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full max-w-md rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           />
           <select
             value={statusFilter}
             onChange={(e) => setstatusFilter(e.target.value)}
-            className="border border-gray-300 rounded-md py-2 px-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="rounded-md border border-gray-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="ALL">All Statuses</option>
             <option value="Completed">Completed</option>
@@ -100,17 +100,17 @@ function HistoryPage() {
           </p>
         ) : (
           <div className = "overflow-x-auto rounded-lg border border-slate-200">
-            <table className = "min-w-full divide-y divide-slate-200">
-              <thead className = "bg-slate-100">
+            <table className = "w-full border-collapse text-left text-sm">
+              <thead className="bg-slate-100 text-slate-700">
                 <tr>
-                  <th className = "px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Target</th>
-                  <th className = "px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Timestamp</th>
-                  <th className = "px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Status</th>
-                  <th className = "px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Devices Found</th>
-                  <th className = "px-6 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Findings Found</th>
+                  <th className="px-4 py-3">Target</th>
+                  <th className="px-4 py-3">Timestamp</th>
+                  <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Devices Found</th>
+                  <th className="px-4 py-3">Findings Found</th>
                 </tr>
               </thead>
-              <tbody className = "bg-white divide-y divide-slate-200">
+              <tbody className = "divide-y divide-slate-200">
                 {filteredScans.map((scan) => (
                   <tr key={scan.id}>
                     <td className = "px-6 py-4 whitespace-nowrap">{scan.target}</td>

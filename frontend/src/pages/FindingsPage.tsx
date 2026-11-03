@@ -128,6 +128,7 @@ function FindingsPage() {
                   <th className = "px-4 py-3">Finding</th>
                   <th className = "px-4 py-3">Host</th>
                   <th className = "px-4 py-3">Port</th>
+                  <th className = "px-4 py-3">Service</th>
                   <th className = "px-4 py-3">Description</th>
                 </tr>
               </thead>
@@ -146,6 +147,7 @@ function FindingsPage() {
                     <td className = "px-4 py-3">{finding.title}</td>
                     <td className = "px-4 py-3">{finding.ip}</td>
                     <td className = "px-4 py-3">{finding.port}</td>
+                    <td className = "px-4 py-3">{finding.service}</td>
                     <td className = "px-4 py-3">{finding.description}</td>
                   </tr>
                 ))}

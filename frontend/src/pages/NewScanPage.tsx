@@ -38,13 +38,13 @@ function NewScanPage() {
         description="Start a scan of an approved local network target."
       />
       
-      <section style={{ maxWidth: '600px', marginTop: '24px' }}>
+      <section className = "max-w-150">
 
         <form onSubmit={handleSubmit}>
-          <div style={{ marginBottom: '20px' }}>
+          <div className="mb-5">
             <label 
             htmlFor="target"
-            style={{ display: 'block', marginBottom: '8px' }}
+            className="mb-2 block text-sm font-medium text-slate-700"
             >
               Target: IP Address or Network Range 
             </label>
@@ -63,24 +63,15 @@ function NewScanPage() {
               }}
               required
               disabled={scanning}
-              style ={{
-                width: '100%',
-                padding: '10px',
-                boxSizing: 'border-box'
-              }}
+              className = "w-full box-border rounded-md border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:cursor-not-allowed disabled:bg-slate-100"
             />
           </div>
 
-          <button type="submit" disabled={scanning} style ={{
-            padding: '10px 20px',
-            backgroundColor: '#0f172a',
-            color: 'white',
-            border: 'none',
-            borderRadius: '6px',
-            cursor: scanning ? 'wait' : 'pointer',
-            opacity: scanning ? 0.7 : 1,
-            transition: 'background-color 0.15s, transform 0.1s',
-           }}
+          <button 
+          type="submit" 
+          disabled={scanning}
+          className = "rounded-md bg-slate-900 px-5 py-2 text-white transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+           
            onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#1e293b';
            }}
@@ -101,13 +92,12 @@ function NewScanPage() {
         </form>
 
         {status && ( 
-          <p role="status" style={{ marginTop: '20px' }}>
-            {status}
+          <p role="status" className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
           </p>
         )}
 
         {error && (
-          <p role="alert" style={{ marginTop: '20px', color: '#b91c1c' }}>
+          <p role="alert" className="mt-5 rounded-md border border-red-200 bg-red-50 p-4 text-sm text-red-700">
             {error}
           </p>
         )}
