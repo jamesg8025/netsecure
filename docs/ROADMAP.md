@@ -35,9 +35,9 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 - [ ] Input validation and error handling — **Austin**
 
 ### Database (WBS 5.0) · Sep 21–Oct 18
-- [ ] Design SQLite schema (scans, hosts, ports, services, findings) — **Matt**
-- [ ] Schema initialization and migrations — **Matt**
-- [ ] Data-access functions and scan-history queries — **Matt**
+- [x] Design SQLite schema (scans, hosts, ports, services, findings) — **Matt**
+- [x] Schema initialization and migrations — **Matt**
+- [x] Data-access functions and scan-history queries — **Matt**
 
 ### Frontend (WBS 6.0) · Sep 21–Oct 25
 - [x] Dashboard layout and navigation — **Izaiah**
@@ -106,3 +106,15 @@ New Scan page calls it and shows a scanning state, results, and errors. Scans
 run synchronously and nothing is persisted yet. Database storage (WBS 5.0),
 background jobs, and auth (WBS 9.0) remain open, so no roadmap boxes are
 checked by this change.
+
+### Database progress — November 2, 2026
+
+WBS 5.0: Matt's schema, queries, and importer are in `database/`, with
+`product`/`version`/`title`/`profile` columns added. Django models and a
+migration mirror the schema (`backend/api/models.py`), and
+`backend/api/scan_store.py` holds the scan lifecycle, result saving, and
+history/devices/findings queries. `POST /api/scans/` now saves every scan,
+including failures with their reason (FR-03, NFR-04). Scans have no owner
+until login exists (WBS 9.0). Still open: API routes and frontend pages for
+history/devices/findings, storing rule-engine findings (WBS 7.0), and
+background jobs (NFR-02).

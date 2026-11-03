@@ -1,5 +1,29 @@
 # NetSecure database
 
+> **Integration notes (WBS 5.0, November 2, 2026).** This folder is Matt's
+> delivered package plus the changes below. In the repo, **Django migrations own
+> the schema**: the tables are `backend/api/models.py` and
+> `backend/api/migrations/`, with the same table/column names and constraints as
+> `schema.sql`. Don't run `schema.sql` or `init_db.py` against the backend's
+> database. They remain the reference design and a standalone sandbox.
+>
+> - **Added columns:** `services.product`, `services.version`, `findings.title`
+>   (Matt's follow-up), and `scans.profile` (`basic`/`discovery`, the scanner
+>   profile the scan used).
+> - **Users:** the backend uses Django's own user model instead of the `users`
+>   table below, so there is one login store. `scans.user_id` is nullable until
+>   login exists (WBS 9.0).
+> - **Saving results:** `backend/api/scan_store.py`. Its `save_results()` is
+>   `import_scan.py`'s import step, adapted to take the scanner's result list
+>   (`docs/SCANNER_HANDOFF.md`) and to accept zero-host scans.
+>   `import_scan.py` is kept for reference only; it parses a text report format
+>   the scanner doesn't produce.
+> - **Queries:** `scan_store.scan_history/scan_devices/scan_findings` return
+>   the same rows as the three `.sql` files; tests compare them directly.
+> - **Tests:** `test_db.py` became `tests/test_database_schema.py`
+>   (`python -m unittest discover -s tests`). The Django side is tested by
+>   `python manage.py test` in `backend/`.
+
 SQLite implementation of the recovered five-table design:
 users -> scans -> hosts -> services -> findings.
 
@@ -11,7 +35,7 @@ init_db.py, and test_db.py. It has not been connected to Austin's Django project
 Use the included database, or on a fresh checkout run:
 
     python init_db.py
-    python test_db.py
+    python -m unittest tests.test_database_schema   # from the repo root
 
 Python's standard library is sufficient. schema.sql is a one-time initialization
 script, not an upgrade script. It deliberately fails if these tables already

@@ -52,7 +52,7 @@ flowchart LR
 | **Frontend** | `frontend/` | `src/routes.tsx`, `src/layouts/`, `src/pages/`, `src/components/`, `src/api/client.ts` | FR-04, FR-06 (display), NFR-02, NFR-03 |
 | **Backend API** | `backend/` | `config/settings.py`, `config/urls.py`, `api/views.py`, `api/urls.py` | FR-01 (invoke), FR-03 (store), FR-05 (warnings) |
 | **Scanner** | `scanner/` | `scanner.py`, `validator.py` | FR-01 (Nmap), FR-02 (validation) |
-| **Database** | `database/` | `schema.sql`, `models.py`, migrations | FR-03 (persistence), NFR-04 (failure logs) |
+| **Database** | `database/`, `backend/api/` | `database/schema.sql` + `*.sql` (reference design); `api/models.py`, `api/migrations/`, `api/scan_store.py` (what runs) | FR-03 (persistence), NFR-04 (failure logs) |
 | **Rule Engine** | `backend/` | `rules.py` | FR-05 (warnings), FR-06 (severity) |
 
 ## Current Repo State
@@ -69,7 +69,9 @@ As of initial scaffold:
   Scan-target validation is a fail-closed placeholder until the scanner's
   validator exists.
 - **`scanner/`** — Empty (`.gitkeep`). Scanner module not yet created.
-- **`database/`** — Empty (`.gitkeep`). Schema not yet defined.
+- **`database/`** — Matt's SQLite schema (`schema.sql`) and dashboard queries.
+  Django migrations own the live schema (`backend/api/models.py`); scans are
+  saved through `backend/api/scan_store.py`. See `database/README.md`.
 - **`docs/`** — SRS and Project Plan present. Design doc, roadmap, and this file
   added as part of repo setup.
 
