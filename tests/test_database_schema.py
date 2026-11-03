@@ -110,6 +110,65 @@ class ScanLifecycleTests(SchemaTestCase):
         self.reject("UPDATE scans SET error_message='oops' WHERE scan_id=1")
 
 
+class AddedColumnTests(SchemaTestCase):
+    """Columns added on integration: profile, owner-less scans, product/version, title."""
+
+    def test_scan_without_owner_until_login_exists(self):
+        self.db.execute("INSERT INTO scans (target) VALUES ('192.0.2.1')")
+
+    def test_profile_defaults_to_basic_and_is_restricted(self):
+        self.db.execute("INSERT INTO scans (scan_id, target) VALUES (5, '192.0.2.1')")
+        profile = self.db.execute("SELECT profile FROM scans WHERE scan_id=5").fetchone()[0]
+        self.assertEqual(profile, "basic")
+        self.db.execute("INSERT INTO scans (target, profile) VALUES ('192.0.2.1', 'discovery')")
+        self.reject("INSERT INTO scans (target, profile) VALUES ('192.0.2.1', '-A')")
+
+    def test_service_product_and_version_are_optional(self):
+        self.add_scan()
+        self.db.execute(
+            "INSERT INTO services (host_id, port, protocol, service_name, product, version) "
+            "VALUES (1, 22, 'tcp', 'ssh', 'OpenSSH', '9.6')")
+        self.db.execute("INSERT INTO services (host_id, port, protocol) VALUES (1, 80, 'tcp')")
+
+    def test_finding_title_is_optional(self):
+        self.add_scan()
+        self.db.execute("INSERT INTO services (service_id, host_id, port, protocol) VALUES (1, 1, 23, 'tcp')")
+        self.db.execute(
+            "INSERT INTO findings (service_id, severity, title, description) "
+            "VALUES (1, 'high', 'Telnet open', 'Telnet sends passwords in plain text.')")
+        self.db.execute("INSERT INTO findings (service_id, severity, description) VALUES (1, 'low', 'Example')")
+
+
+class QueryFileTests(SchemaTestCase):
+    """Matt's dashboard queries must stay valid against the schema."""
+
+    def run_query(self, name, params):
+        sql = (SCHEMA.parent / name).read_text()
+        return self.db.execute(sql, params).fetchall()
+
+    def setUp(self):
+        super().setUp()
+        self.add_scan()
+        self.db.execute("INSERT INTO hosts (host_id, scan_id, ip_address) VALUES (2, 1, '192.0.2.2')")
+        self.db.execute("INSERT INTO services (service_id, host_id, port, protocol) VALUES (1, 1, 23, 'tcp')")
+        self.db.execute("INSERT INTO services (service_id, host_id, port, protocol) VALUES (2, 1, 80, 'tcp')")
+        for severity in ("low", "critical"):
+            self.db.execute(
+                "INSERT INTO findings (service_id, severity, description) VALUES (1, ?, 'x')", (severity,))
+
+    def test_history_counts_hosts_and_findings_separately(self):
+        rows = self.run_query("history_results.sql", {"user_id": 1})
+        self.assertEqual(rows, [(1, "192.0.2.1", None, None, "Pending", 2, 2)])
+
+    def test_devices_include_hosts_without_services(self):
+        rows = self.run_query("service_results.sql", {"scan_id": 1})
+        self.assertEqual([(r[1], r[4]) for r in rows], [("192.0.2.1", 23), ("192.0.2.1", 80), ("192.0.2.2", None)])
+
+    def test_findings_sorted_most_severe_first(self):
+        rows = self.run_query("finding_results.sql", {"scan_id": 1})
+        self.assertEqual([(r[1], r[2]) for r in rows], [("critical", "Untitled finding"), ("low", "Untitled finding")])
+
+
 class DeletionTests(SchemaTestCase):
     def test_deleting_a_scan_cascades_to_its_results(self):
         self.add_scan(1, 1)

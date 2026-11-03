@@ -17,8 +17,11 @@ CREATE TABLE users (
 -- 2. Scans
 CREATE TABLE scans (
     scan_id INTEGER PRIMARY KEY,
-    user_id INTEGER NOT NULL,
+    -- NULL until login exists (WBS 9.0); the backend then sets the owner.
+    user_id INTEGER,
     target TEXT NOT NULL CHECK (length(trim(target)) > 0),
+    profile TEXT NOT NULL DEFAULT 'basic'
+        CHECK (profile IN ('basic', 'discovery')),
     started_at TEXT,
     finished_at TEXT,
     status TEXT NOT NULL DEFAULT 'pending'
@@ -54,6 +57,8 @@ CREATE TABLE services (
     port INTEGER NOT NULL CHECK (typeof(port) = 'integer' AND port BETWEEN 0 AND 65535),
     protocol TEXT NOT NULL CHECK (protocol IN ('tcp', 'udp')),
     service_name TEXT,
+    product TEXT,
+    version TEXT,
     FOREIGN KEY (host_id) REFERENCES hosts(host_id) ON DELETE CASCADE,
     UNIQUE (host_id, port, protocol)
 );
@@ -64,6 +69,7 @@ CREATE TABLE findings (
     service_id INTEGER NOT NULL,
     severity TEXT NOT NULL
         CHECK (severity IN ('info', 'low', 'medium', 'high', 'critical')),
+    title TEXT,
     description TEXT NOT NULL CHECK (length(trim(description)) > 0),
     FOREIGN KEY (service_id) REFERENCES services(service_id) ON DELETE CASCADE
 );
