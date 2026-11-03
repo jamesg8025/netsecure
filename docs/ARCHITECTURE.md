@@ -29,7 +29,7 @@ flowchart LR
 
     Nmap{{Nmap\nexternal binary}}
 
-    UI -- "POST /api/scan\n{target}" --> API
+    UI -- "POST /api/scans/\n{target, profile}" --> API
     API -- "validate(target)" --> Val
     Val -- "ok / reject" --> API
     API -- "run_scan(target)" --> Exec
@@ -41,7 +41,7 @@ flowchart LR
     Rules -- "read scan data" --> DB
     Rules -- "write findings\n+ severity" --> DB
     API -- "JSON response\ndevices, findings,\nhistory" --> UI
-    UI -- "GET /api/devices\nGET /api/findings\nGET /api/history" --> API
+    UI -- "GET /api/scans/\nGET /api/scans/{id}/devices/\nGET /api/scans/{id}/findings/" --> API
     API -- "query" --> DB
 ```
 
@@ -64,8 +64,8 @@ As of initial scaffold:
   `/api` to Django in development; the header shows backend health from
   `GET /api/health/`. Tests run with Vitest + React Testing Library.
 - **`backend/`** — Django 6.1 project initialized (`config/` project package,
-  `api/` app). Settings read from environment variables; only `GET /api/health/`
-  is routed so far. All `/api/` errors return JSON (see API Error Format below).
+  `api/` app). Settings read from environment variables. Routes are listed under
+  API Endpoints below. All `/api/` errors return JSON (see API Error Format below).
   Scan-target validation is a fail-closed placeholder until the scanner's
   validator exists.
 - **`scanner/`** — Empty (`.gitkeep`). Scanner module not yet created.
@@ -85,8 +85,26 @@ Architecture and Interfaces phase (Sep 16–27).
 | Scan request | Frontend → Backend | `POST /api/scan` — JSON `{ target: string }` |
 | Scan result | Scanner → Backend | Python dict: `{ hosts: [{ ip, hostname, ports: [{ number, protocol, service, state }] }] }` |
 | Findings | Rule Engine → Database | Finding rows: `{ scan_id, host_ip, port, service, severity, description }` |
-| Dashboard data | Backend → Frontend | JSON — devices, findings, history endpoints |
+| Dashboard data | Backend → Frontend | JSON — see API Endpoints below |
 | API errors | Backend → Frontend | JSON — see API Error Format below |
+
+## API Endpoints
+
+All under `/api/`, implemented in `backend/api/views.py`. Timestamps are ISO 8601
+UTC (`2026-11-02T01:00:00Z`). Until login exists (WBS 9.0), every scan is
+visible to every caller; ownership checks come with auth.
+
+| Method + path | Returns |
+|---------------|---------|
+| `GET /api/health/` | `{ status: "ok" }` |
+| `GET /api/csrf/` | `{ csrfToken }`, and sets the CSRF cookie POSTs need |
+| `POST /api/scans/` | Body `{ target, profile? }`. Runs the scan synchronously and saves it. `{ scan_id, target, profile, hosts }`; 400 invalid input, 502 scan failed (still saved as failed) |
+| `GET /api/scans/` | `{ scans: [{ scan_id, target, profile, timestamp, finished_at, status, error_message, devices_found, findings_found }] }`, newest first. `timestamp` is the start time; `status` is `Pending` / `In-Progress` / `Completed` / `Failed` |
+| `GET /api/scans/{id}/devices/` | `{ scan_id, devices: [{ host_id, ip_address, hostname, service_id, port, protocol, service, product, version }] }`, one row per open service; a host with none has one row with null service fields. 404 `scan_not_found` |
+| `GET /api/scans/{id}/findings/` | `{ scan_id, findings: [{ finding_id, severity, finding, host, port, protocol, service, description }] }`, most severe first. 404 `scan_not_found` |
+
+The history/devices/findings rows match `database/history_results.sql`,
+`service_results.sql`, and `finding_results.sql` (via `api/scan_store.py`).
 
 ## API Error Format
 
