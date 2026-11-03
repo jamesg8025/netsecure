@@ -48,6 +48,7 @@ development, `DJANGO_DEBUG=1` is enough:
 
 ```bash
 export DJANGO_DEBUG=1            # PowerShell: $env:DJANGO_DEBUG = "1"
+python manage.py migrate         # create/update your local db.sqlite3 (re-run after pulling new migrations)
 python manage.py test
 python manage.py runserver       # then open http://127.0.0.1:8000/api/health/
 ```
