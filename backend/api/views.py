@@ -1,7 +1,7 @@
 from django.http import JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_GET, require_POST
+from django.views.decorators.http import require_GET, require_http_methods
 
 from scanner.scanner import SCAN_PROFILES, ScanError, scan_target
 
@@ -24,8 +24,26 @@ def csrf(request):
     return JsonResponse({'csrfToken': get_token(request)})
 
 
-@require_POST
+@require_http_methods(['GET', 'POST'])
 def scans(request):
+    """GET lists saved scans (history); POST runs a new scan."""
+    if request.method == 'GET':
+        return _list_scans(request)
+    return _start_scan(request)
+
+
+def _list_scans(request):
+    """
+    Scan history, newest first (UC-05).
+
+    Each scan has its target, profile, status, start/finish times, error
+    message (failed scans), and device and finding counts. Every scan is listed
+    until login exists (WBS 9.0); then this must pass request.user.
+    """
+    return JsonResponse({'scans': scan_store.scan_history()})
+
+
+def _start_scan(request):
     """
     Run a scan, save it, and return its results.
 
@@ -70,3 +88,4 @@ def scans(request):
         raise
 
     return JsonResponse({'scan_id': scan.scan_id, 'target': target, 'profile': profile, 'hosts': hosts})
+
