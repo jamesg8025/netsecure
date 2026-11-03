@@ -69,3 +69,87 @@ class ScanHistoryEndpointTests(TestCase):
 
         self.assertEqual([(s['scan_id'], s['status']) for s in scans], [(scan_id, 'Completed')])
 
+
+class ScanDevicesEndpointTests(TestCase):
+    def test_lists_devices_one_row_per_service(self):
+        scan = completed_scan()
+
+        response = self.client.get(reverse('api:scan-devices', args=[scan.scan_id]))
+
+        self.assertEqual(response.status_code, 200)
+        body = response.json()
+        self.assertEqual(body['scan_id'], scan.scan_id)
+        self.assertEqual(
+            [(d['ip_address'], d['hostname'], d['port'], d['service'], d['product']) for d in body['devices']],
+            [('192.168.1.1', 'router', 23, 'telnet', None),
+             ('192.168.1.1', 'router', 80, 'http', 'lighttpd'),
+             ('192.168.1.20', None, None, None, None)],
+        )
+
+    def test_scan_with_no_hosts_has_no_devices(self):
+        scan = completed_scan(hosts=[])
+
+        response = self.client.get(reverse('api:scan-devices', args=[scan.scan_id]))
+
+        self.assertEqual(response.json(), {'scan_id': scan.scan_id, 'devices': []})
+
+    def test_scans_do_not_mix(self):
+        completed_scan()
+        other = completed_scan(hosts=[{'ip': '10.0.0.5', 'hostname': '', 'services': []}], target='10.0.0.5')
+
+        devices = self.client.get(reverse('api:scan-devices', args=[other.scan_id])).json()['devices']
+
+        self.assertEqual([d['ip_address'] for d in devices], ['10.0.0.5'])
+
+
+class ScanFindingsEndpointTests(TestCase):
+    def test_lists_findings_most_severe_first(self):
+        scan = completed_scan()
+        Finding.objects.create(service=Service.objects.get(port=80), severity='low', description='Banner.')
+        Finding.objects.create(service=Service.objects.get(port=23), severity='critical', title='Telnet open',
+                               description='Telnet sends passwords in plain text.')
+
+        response = self.client.get(reverse('api:scan-findings', args=[scan.scan_id]))
+
+        self.assertEqual(response.status_code, 200)
+        findings = response.json()['findings']
+        self.assertEqual([(f['severity'], f['finding'], f['host'], f['port']) for f in findings], [
+            ('critical', 'Telnet open', '192.168.1.1', 23),
+            ('low', 'Untitled finding', '192.168.1.1', 80),
+        ])
+
+    def test_scan_without_findings(self):
+        scan = completed_scan()
+
+        response = self.client.get(reverse('api:scan-findings', args=[scan.scan_id]))
+
+        self.assertEqual(response.json(), {'scan_id': scan.scan_id, 'findings': []})
+
+
+class ScanDetailRouteTests(TestCase):
+    def test_urls(self):
+        self.assertEqual(reverse('api:scan-devices', args=[7]), '/api/scans/7/devices/')
+        self.assertEqual(reverse('api:scan-findings', args=[7]), '/api/scans/7/findings/')
+
+    def test_unknown_scan_is_404_json(self):
+        for name in ('api:scan-devices', 'api:scan-findings'):
+            for scan_id in (999, 10**30):
+                with self.subTest(name=name, scan_id=scan_id):
+                    response = self.client.get(reverse(name, args=[scan_id]))
+
+                    self.assertEqual(response.status_code, 404)
+                    self.assertEqual(response.json(), {'error': {'code': 'scan_not_found', 'message': 'Scan not found.'}})
+
+    def test_non_numeric_id_is_404(self):
+        response = self.client.get('/api/scans/abc/devices/')
+
+        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.json()['error']['code'], 'not_found')
+
+    def test_only_get_is_allowed(self):
+        scan = completed_scan()
+        for name in ('api:scan-devices', 'api:scan-findings'):
+            with self.subTest(name=name):
+                url = reverse(name, args=[scan.scan_id])
+                self.assertEqual(self.client.post(url).status_code, 405)
+                self.assertEqual(self.client.delete(url).status_code, 405)

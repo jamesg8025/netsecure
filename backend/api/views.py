@@ -7,6 +7,7 @@ from scanner.scanner import SCAN_PROFILES, ScanError, scan_target
 
 from . import scan_store
 from .errors import ApiError
+from .models import Scan
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
 
@@ -89,3 +90,25 @@ def _start_scan(request):
 
     return JsonResponse({'scan_id': scan.scan_id, 'target': target, 'profile': profile, 'hosts': hosts})
 
+
+def _require_scan(scan_id):
+    """404 for a scan that doesn't exist. Ownership checks come with login (WBS 9.0)."""
+    if not Scan.objects.filter(pk=scan_id).exists():
+        raise ApiError(404, 'scan_not_found', 'Scan not found.')
+
+
+@require_GET
+def scan_devices(request, scan_id):
+    """
+    Devices found by one scan (UC-03): one row per open service, plus one row
+    for each host with no open services (all service fields null).
+    """
+    _require_scan(scan_id)
+    return JsonResponse({'scan_id': scan_id, 'devices': scan_store.scan_devices(scan_id)})
+
+
+@require_GET
+def scan_findings(request, scan_id):
+    """Security findings for one scan, most severe first (UC-04, FR-05, FR-06)."""
+    _require_scan(scan_id)
+    return JsonResponse({'scan_id': scan_id, 'findings': scan_store.scan_findings(scan_id)})
