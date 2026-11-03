@@ -5,6 +5,7 @@ from django.views.decorators.http import require_GET, require_POST
 
 from scanner.scanner import SCAN_PROFILES, ScanError, scan_target
 
+from . import scan_store
 from .errors import ApiError
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
@@ -26,13 +27,16 @@ def csrf(request):
 @require_POST
 def scans(request):
     """
-    Run a scan and return its results.
+    Run a scan, save it, and return its results.
 
     Body: {"target": "<private IPv4 or CIDR>", "profile": "basic" | "discovery"}
 
-    The target is validated before the scanner is called (FR-02). The scan runs
-    synchronously for now (up to the scanner's 300-second limit); persistence
-    and background jobs come with the database work (WBS 5.0).
+    The target is validated before anything is stored or scanned (FR-02).
+    The scan is recorded as running, Nmap runs outside any database
+    transaction, then the results are saved and the scan marked completed
+    (FR-03). A failed scan is kept with its reason (NFR-04). The scan still
+    runs synchronously (up to the scanner's 300-second limit); background
+    jobs are later work.
     """
     data = parse_json_body(request)
     target = require_string(data, 'target', max_length=MAX_TARGET_LENGTH)
@@ -47,9 +51,22 @@ def scans(request):
             {'field': 'profile'},
         )
 
+    # No owner until login exists (WBS 9.0).
+    scan = scan_store.create_scan(target, profile)
+    scan_store.start_scan(scan)
     try:
         hosts = scan_target(target, profile=profile)
     except ScanError as error:
+        scan_store.fail_scan(scan, str(error))
         raise ApiError(502, 'scan_failed', str(error)) from error
+    except Exception:
+        scan_store.fail_scan(scan, 'Unexpected error while running the scan.')
+        raise
 
-    return JsonResponse({'target': target, 'profile': profile, 'hosts': hosts})
+    try:
+        scan_store.save_results(scan, hosts)
+    except Exception:
+        scan_store.fail_scan(scan, 'The scan finished but its results could not be saved.')
+        raise
+
+    return JsonResponse({'scan_id': scan.scan_id, 'target': target, 'profile': profile, 'hosts': hosts})

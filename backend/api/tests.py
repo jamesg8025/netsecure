@@ -7,12 +7,16 @@ from unittest import mock
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.http import Http404, HttpResponse
-from django.test import Client, RequestFactory, SimpleTestCase, override_settings
+from django.db import connection
+from django.test import (
+    Client, RequestFactory, SimpleTestCase, TestCase, TransactionTestCase, override_settings,
+)
 from django.urls import include, path, reverse
 
 from scanner.scanner import ScanError
 
 from .errors import ApiError
+from .models import Host, Scan, Service
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
 
@@ -319,7 +323,7 @@ class ScanTargetResponseTests(SimpleTestCase):
         self.assertEqual(response.json()['error']['code'], 'validation_error')
 
 
-class CsrfEndpointTests(SimpleTestCase):
+class CsrfEndpointTests(TestCase):
     def test_returns_token_and_sets_cookie(self):
         response = self.client.get(reverse('api:csrf'))
 
@@ -340,7 +344,7 @@ class CsrfEndpointTests(SimpleTestCase):
         self.assertEqual(response.status_code, 200)
 
 
-class ScanEndpointTests(SimpleTestCase):
+class ScanEndpointTests(TestCase):
     HOSTS = [{
         'ip': '192.168.1.1',
         'hostname': 'router',
@@ -360,7 +364,10 @@ class ScanEndpointTests(SimpleTestCase):
         response = self._post({'target': ' 192.168.1.1 '})
 
         self.assertEqual(response.status_code, 200)
-        self.assertEqual(response.json(), {'target': '192.168.1.1', 'profile': 'basic', 'hosts': self.HOSTS})
+        scan_id = Scan.objects.get().scan_id
+        self.assertEqual(response.json(), {
+            'scan_id': scan_id, 'target': '192.168.1.1', 'profile': 'basic', 'hosts': self.HOSTS,
+        })
         scan_target.assert_called_once_with('192.168.1.1', profile='basic')
 
     @mock.patch('api.views.scan_target', return_value=[])
@@ -411,6 +418,79 @@ class ScanEndpointTests(SimpleTestCase):
         response = self.client.get(reverse('api:scans'))
 
         self.assertEqual(response.status_code, 405)
+
+    @mock.patch('api.views.scan_target')
+    def test_completed_scan_and_results_are_saved(self, scan_target):
+        scan_target.return_value = self.HOSTS
+
+        self._post({'target': '192.168.1.1'})
+
+        scan = Scan.objects.get()
+        self.assertEqual((scan.target, scan.profile, scan.status, scan.user), ('192.168.1.1', 'basic', 'completed', None))
+        self.assertEqual(Host.objects.get(scan=scan).hostname, 'router')
+        service = Service.objects.get()
+        self.assertEqual((service.port, service.service_name, service.product), (80, 'http', None))
+
+    @mock.patch('api.views.scan_target', return_value=[])
+    def test_scan_with_no_hosts_is_completed(self, scan_target):
+        self._post({'target': '192.168.1.0/24', 'profile': 'discovery'})
+
+        scan = Scan.objects.get()
+        self.assertEqual((scan.target, scan.profile, scan.status), ('192.168.1.0/24', 'discovery', 'completed'))
+
+    @mock.patch('api.views.scan_target', side_effect=ScanError('Nmap timed out after 300 seconds.'))
+    def test_failed_scan_is_saved_with_reason(self, scan_target):
+        self._post({'target': '192.168.1.1'})
+
+        scan = Scan.objects.get()
+        self.assertEqual((scan.status, scan.error_message), ('failed', 'Nmap timed out after 300 seconds.'))
+        self.assertIsNotNone(scan.finished_at)
+
+    @mock.patch('api.views.scan_target', side_effect=RuntimeError('boom'))
+    def test_unexpected_scanner_error_is_saved_as_failed(self, scan_target):
+        response = self._post({'target': '192.168.1.1'})
+
+        self.assertEqual(response.status_code, 500)
+        scan = Scan.objects.get()
+        self.assertEqual((scan.status, scan.error_message), ('failed', 'Unexpected error while running the scan.'))
+
+    @mock.patch('api.views.scan_target')
+    def test_unsaveable_results_mark_the_scan_failed(self, scan_target):
+        scan_target.return_value = [{'ip': '192.168.1.1', 'hostname': '', 'services': [
+            {'port': 70000, 'protocol': 'tcp', 'service': '', 'product': '', 'version': ''}]}]
+
+        response = self._post({'target': '192.168.1.1'})
+
+        self.assertEqual(response.status_code, 500)
+        scan = Scan.objects.get()
+        self.assertEqual(scan.status, 'failed')
+        self.assertEqual(Host.objects.count(), 0)
+
+    @mock.patch('api.views.scan_target')
+    def test_rejected_input_stores_nothing(self, scan_target):
+        for body in ({'target': '8.8.8.8'}, {'target': '10.0.0.1; rm -rf /'}, {},
+                     {'target': '192.168.1.1', 'profile': '-A'}):
+            with self.subTest(body=body):
+                self.assertEqual(self._post(body).status_code, 400)
+        self.assertEqual(Scan.objects.count(), 0)
+        scan_target.assert_not_called()
+
+
+class ScanEndpointTransactionTests(TransactionTestCase):
+    """TestCase wraps every test in a transaction, so this check needs TransactionTestCase."""
+
+    def test_nmap_runs_outside_a_database_transaction(self):
+        def fake_scan(target, profile):
+            self.assertFalse(connection.in_atomic_block)
+            self.assertEqual(Scan.objects.get().status, 'running')
+            return []
+
+        with mock.patch('api.views.scan_target', side_effect=fake_scan) as scan_target:
+            response = self.client.post(
+                reverse('api:scans'), data={'target': '192.168.1.1'}, content_type='application/json')
+
+        self.assertEqual(response.status_code, 200)
+        scan_target.assert_called_once()
 
 
 class ProjectConfigTests(SimpleTestCase):
