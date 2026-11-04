@@ -44,7 +44,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 - [ ] Scan initiation page with target input — **Izaiah**
 - [ ] Device list view — **Izaiah**
 - [ ] Security findings / warnings view with severity indicators — **Izaiah**
-- [ ] Scan history view — **Izaiah**
+- [x] Scan history view — **Izaiah**
 - [ ] Scan-in-progress indicator (NFR-02) — **Izaiah**
 
 ## Phase 4 — Security Findings (WBS 7.0) · Oct 12–Nov 1
@@ -125,3 +125,10 @@ WBS 4.0/8.0: read endpoints for saved scans: `GET /api/scans/` (history),
 `GET /api/scans/{id}/devices/`, and `GET /api/scans/{id}/findings/`, listed in
 `ARCHITECTURE.md` under API Endpoints. Every scan is visible until login exists
 (WBS 9.0). Next: the frontend History, Devices, and Findings pages (WBS 6.0).
+
+### Integration progress — November 4, 2026
+
+WBS 6.0/8.0 (#13): the History page lists saved scans from `GET /api/scans/`,
+with loading, error, and empty states, and shows why a scan failed (NFR-04).
+Still open for UC-05: selecting a scan to see its results. Next: the Devices and
+Findings pages.
