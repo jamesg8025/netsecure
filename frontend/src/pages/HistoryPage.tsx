@@ -1,55 +1,48 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageHeader from '../components/PageHeader'
+import { ApiError, listScans, type ScanStatus, type ScanSummary } from '../api/client'
 
-type scanStatus = 'Completed' | 'Failed' | 'In-Progress'
+type LoadState =
+  | { kind: 'loading' }
+  | { kind: 'error'; message: string }
+  | { kind: 'ready'; scans: ScanSummary[] }
 
-type scanRecord = {
-  id: number
-  target: string
-  timestamp: Date
-  status: scanStatus
-  devicesFound: number
-  findingsFound: number
+const LOAD_ERROR = 'Could not load scan history. Check that the backend is running.'
+
+// A scan that never started has no timestamp.
+function formatTimestamp(timestamp: string | null) {
+  return timestamp ? new Date(timestamp).toLocaleString() : 'Not started'
 }
-
-const sampleScans: scanRecord[] = [
-  {
-    id: 1,
-    target: "192.168.1.1",
-    timestamp: new Date(),
-    status: "Completed",
-    devicesFound: 5,
-    findingsFound: 3
-  },
-  {
-    id: 2,
-    target: "10.0.0.1",
-    timestamp: new Date(),
-    status: "Failed",
-    devicesFound: 0,
-    findingsFound: 0
-  },
-  {
-    id: 3,
-    target: "172.16.0.1",
-    timestamp: new Date(),
-    status: "In-Progress",
-    devicesFound: 2,
-    findingsFound: 1
-  }
-]
 
 function HistoryPage() {
   const [search, setSearch] = useState("")
   const [statusFilter, setstatusFilter] = useState('ALL')
+  const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
 
-  const filteredScans = sampleScans.filter(scan => {
-    const matchesSearch = `${scan.target} ${scan.timestamp.toLocaleString()} ${scan.status}`.toLowerCase().includes(search.toLowerCase())
+  useEffect(() => {
+    const controller = new AbortController()
+
+    listScans(controller.signal)
+      .then((scans) => setLoad({ kind: 'ready', scans }))
+      .catch((err: unknown) => {
+        if (controller.signal.aborted) return
+        // Only an ApiError with a code carries a message from the backend.
+        const message = err instanceof ApiError && err.code ? err.message : LOAD_ERROR
+        setLoad({ kind: 'error', message })
+      })
+
+    return () => controller.abort()
+  }, [])
+
+  const scans = load.kind === 'ready' ? load.scans : []
+
+  const filteredScans = scans.filter(scan => {
+    const matchesSearch = `${scan.target} ${formatTimestamp(scan.timestamp)} ${scan.status}`.toLowerCase().includes(search.toLowerCase())
     const matchesStatus = statusFilter === 'ALL' || scan.status === statusFilter
     return matchesSearch && matchesStatus
   })
 
-  function getstatusStyle(status: scanStatus) {
+  function getstatusStyle(status: ScanStatus) {
     switch (status) {
       case 'Completed':
         return { backgroundColor: 'lightgreen', color: 'black' }
@@ -57,6 +50,7 @@ function HistoryPage() {
         return { backgroundColor: 'lightcoral', color: 'black' }
       case 'In-Progress':
         return { backgroundColor: 'lightblue', color: 'black' }
+      case 'Pending':
       default:
         return { backgroundColor: 'lightgray', color: 'black' }
     }
@@ -87,14 +81,29 @@ function HistoryPage() {
             <option value="Completed">Completed</option>
             <option value="Failed">Failed</option>
             <option value="In-Progress">In Progress</option>
+            <option value="Pending">Pending</option>
           </select>
         </div>
 
-        <p className = "mb-3 text-sm text-slate-600">
-          {filteredScans.length} scan(s) found.
-        </p>
+        {scans.length > 0 && (
+          <p className = "mb-3 text-sm text-slate-600">
+            {filteredScans.length} scan(s) found.
+          </p>
+        )}
 
-        {filteredScans.length === 0 ? (
+        {load.kind === 'loading' ? (
+          <p role="status" className = "rounded-md border border-slate-200 p-6 text-slate-600">
+            Loading scans…
+          </p>
+        ) : load.kind === 'error' ? (
+          <p role="alert" className = "rounded-md border border-red-200 bg-red-50 p-6 text-red-700">
+            {load.message}
+          </p>
+        ) : scans.length === 0 ? (
+          <p className = "rounded-md border border-slate-200 p-6 text-slate-600">
+            No scans yet. Run one from New Scan and it will appear here.
+          </p>
+        ) : filteredScans.length === 0 ? (
           <p className = "rounded-md border border-slate-200 p-6 text-slate-600">
             No scans match your search.
           </p>
@@ -112,16 +121,19 @@ function HistoryPage() {
               </thead>
               <tbody className = "bg-white divide-y divide-slate-200">
                 {filteredScans.map((scan) => (
-                  <tr key={scan.id}>
+                  <tr key={scan.scan_id}>
                     <td className = "px-6 py-4 whitespace-nowrap">{scan.target}</td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.timestamp.toLocaleString()}</td>
+                    <td className = "px-6 py-4 whitespace-nowrap">{formatTimestamp(scan.timestamp)}</td>
                     <td className = "px-6 py-4 whitespace-nowrap">
                       <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={getstatusStyle(scan.status)}>
                         {scan.status}
                       </span>
+                      {scan.error_message && (
+                        <p className = "mt-1 max-w-xs whitespace-normal text-xs text-slate-600">{scan.error_message}</p>
+                      )}
                     </td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.devicesFound}</td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.findingsFound}</td>
+                    <td className = "px-6 py-4 whitespace-nowrap">{scan.devices_found}</td>
+                    <td className = "px-6 py-4 whitespace-nowrap">{scan.findings_found}</td>
                   </tr>
                 ))}
               </tbody>
