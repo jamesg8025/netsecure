@@ -104,6 +104,34 @@ describe('HistoryPage', () => {
     expect(rows()[0]).toHaveTextContent('10.0.0.5')
   })
 
+  it('filters to pending scans', async () => {
+    const user = userEvent.setup()
+    mockScans([
+      scan({ scan_id: 2, target: '10.0.0.5', timestamp: null, finished_at: null, status: 'Pending' }),
+      scan({ scan_id: 1, target: '192.168.1.1' }),
+    ])
+    render(<HistoryPage />)
+    await screen.findByText('2 scan(s) found.')
+
+    await user.selectOptions(screen.getByRole('combobox'), 'Pending')
+
+    expect(rows()).toHaveLength(1)
+    expect(rows()[0]).toHaveTextContent('10.0.0.5')
+  })
+
+  it('shows why a scan failed (NFR-04)', async () => {
+    mockScans([
+      scan({ scan_id: 2, target: '10.0.0.5', status: 'Failed', error_message: 'Nmap could not be run.' }),
+      scan({ scan_id: 1, target: '192.168.1.1' }),
+    ])
+    render(<HistoryPage />)
+    await screen.findByText('2 scan(s) found.')
+
+    const [failed, completed] = rows()
+    expect(failed).toHaveTextContent('Nmap could not be run.')
+    expect(completed).not.toHaveTextContent('Nmap could not be run.')
+  })
+
   it('shows "Not started" for a null timestamp, in the table and the search', async () => {
     const user = userEvent.setup()
     mockScans([

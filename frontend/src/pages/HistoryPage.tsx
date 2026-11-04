@@ -50,6 +50,7 @@ function HistoryPage() {
         return { backgroundColor: 'lightcoral', color: 'black' }
       case 'In-Progress':
         return { backgroundColor: 'lightblue', color: 'black' }
+      case 'Pending':
       default:
         return { backgroundColor: 'lightgray', color: 'black' }
     }
@@ -80,6 +81,7 @@ function HistoryPage() {
             <option value="Completed">Completed</option>
             <option value="Failed">Failed</option>
             <option value="In-Progress">In Progress</option>
+            <option value="Pending">Pending</option>
           </select>
         </div>
 
@@ -126,6 +128,9 @@ function HistoryPage() {
                       <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={getstatusStyle(scan.status)}>
                         {scan.status}
                       </span>
+                      {scan.error_message && (
+                        <p className = "mt-1 max-w-xs whitespace-normal text-xs text-slate-600">{scan.error_message}</p>
+                      )}
                     </td>
                     <td className = "px-6 py-4 whitespace-nowrap">{scan.devices_found}</td>
                     <td className = "px-6 py-4 whitespace-nowrap">{scan.findings_found}</td>
