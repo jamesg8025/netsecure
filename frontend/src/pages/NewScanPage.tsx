@@ -38,7 +38,7 @@ function NewScanPage() {
         description="Start a scan of an approved local network target."
       />
       
-      <section className = "max-w-150">
+      <section className="mt-6 max-w-150">
 
         <form onSubmit={handleSubmit}>
           <div className="mb-5">
