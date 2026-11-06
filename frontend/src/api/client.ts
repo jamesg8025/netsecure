@@ -35,7 +35,7 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
     signal,
   })
   if (!response.ok) {
-    throw new ApiError(response.status, `GET /api${path} failed with ${response.status}`)
+    throw await toApiError(response, `GET /api${path} failed with ${response.status}`)
   }
   return (await response.json()) as T
 }
@@ -96,4 +96,27 @@ export type ScanResponse = {
 
 export function startScan(target: string, profile: ScanProfile = 'basic'): Promise<ScanResponse> {
   return apiPost<ScanResponse>('/scans/', { target, profile })
+}
+
+export type ScanStatus = 'Pending' | 'In-Progress' | 'Completed' | 'Failed'
+
+// One row of GET /api/scans/ (docs/ARCHITECTURE.md, API Endpoints).
+export type ScanSummary = {
+  scan_id: number
+  target: string
+  profile: ScanProfile
+  // ISO 8601 UTC start time; null for a scan that never started.
+  timestamp: string | null
+  finished_at: string | null
+  status: ScanStatus
+  // Set only for failed scans.
+  error_message: string | null
+  devices_found: number
+  findings_found: number
+}
+
+// Saved scans, newest first.
+export async function listScans(signal?: AbortSignal): Promise<ScanSummary[]> {
+  const { scans } = await apiGet<{ scans: ScanSummary[] }>('/scans/', signal)
+  return scans
 }

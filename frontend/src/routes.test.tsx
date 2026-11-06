@@ -12,9 +12,12 @@ function renderAt(path: string) {
 }
 
 describe('dashboard routes', () => {
-  // The layout's BackendStatus calls the health endpoint on mount.
+  // The layout's BackendStatus calls the health endpoint on mount, and the
+  // History page loads the scan list.
   beforeEach(() => {
-    vi.stubGlobal('fetch', vi.fn(async () => Response.json({ status: 'ok' })))
+    vi.stubGlobal('fetch', vi.fn(async (url: string) => (
+      Response.json(url === '/api/scans/' ? { scans: [] } : { status: 'ok' })
+    )))
   })
 
   afterEach(() => {

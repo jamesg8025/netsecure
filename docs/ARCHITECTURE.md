@@ -60,9 +60,10 @@ flowchart LR
 As of initial scaffold:
 
 - **`frontend/`** — Dashboard shell: sidebar layout with React Router routes for
-  New Scan, Devices, Findings, and History (placeholder content). Vite proxies
-  `/api` to Django in development; the header shows backend health from
-  `GET /api/health/`. Tests run with Vitest + React Testing Library.
+  New Scan, Devices, Findings, and History. New Scan calls `POST /api/scans/`
+  and History lists `GET /api/scans/`; Devices and Findings still show sample
+  data. Vite proxies `/api` to Django in development; the header shows backend
+  health from `GET /api/health/`. Tests run with Vitest + React Testing Library.
 - **`backend/`** — Django 6.1 project initialized (`config/` project package,
   `api/` app). Settings read from environment variables. Routes are listed under
   API Endpoints below. All `/api/` errors return JSON (see API Error Format below).
