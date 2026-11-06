@@ -145,4 +145,7 @@ cover the device service rows and product/version search.
 WBS 6.0/8.0: the Devices page now loads the newest completed scan and its
 device/service rows from `GET /api/scans/` and `GET /api/scans/{id}/devices/`.
 It shows loading, error, no-completed-scan, no-device, and no-search-match
-states. Selecting older scans and broader end-to-end verification remain open.
+states. Its summary distinguishes unique devices from displayed rows; search
+matches combined host and service fields. Tests cover API errors including
+`scan_not_found`. Selecting older scans and broader end-to-end verification
+remain open.

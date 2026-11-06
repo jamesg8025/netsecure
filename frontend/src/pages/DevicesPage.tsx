@@ -15,7 +15,7 @@ function formatTimestamp(timestamp: string | null) {
 }
 
 function deviceMatchesSearch(device: ScanDevice, query: string) {
-  return [
+  const searchText = [
     device.ip_address,
     device.hostname,
     device.port?.toString(),
@@ -23,7 +23,9 @@ function deviceMatchesSearch(device: ScanDevice, query: string) {
     device.service,
     device.product,
     device.version,
-  ].some((value) => value?.toLowerCase().includes(query))
+  ].filter(Boolean).join(' ').toLowerCase()
+
+  return searchText.includes(query)
 }
 
 function DevicesPage() {
@@ -99,7 +101,7 @@ function DevicesPage() {
             </div>
 
             <p className="mb-3 text-sm text-slate-600">
-              {hostCount} device(s) found
+              {hostCount} device{hostCount === 1 ? '' : 's'} found · {filteredDevices.length} row{filteredDevices.length === 1 ? '' : 's'} shown
             </p>
 
             {devices.length === 0 ? (
@@ -126,8 +128,8 @@ function DevicesPage() {
                   <tbody className="divide-y divide-slate-200">
                     {filteredDevices.map((device) => (
                       <tr
-                        key={device.service_id ?? `host-${device.host_id}`}
-                        className="hover:bg-slate-50"
+                        key={`${device.host_id}-${device.port ?? 'no-port'}-${device.protocol ?? 'no-protocol'}`}
+                        className="hover:bg-slate-100"
                       >
                         <td className="whitespace-nowrap px-4 py-3 font-medium text-slate-800">
                           {device.ip_address}

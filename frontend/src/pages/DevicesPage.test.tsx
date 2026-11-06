@@ -83,7 +83,7 @@ describe('DevicesPage (WBS 6.0/8.0)', () => {
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading devices…')
     expect(await screen.findByText(/Showing scan #12 for 192\.168\.1\.0\/24/)).toBeInTheDocument()
-    expect(screen.getByText('2 device(s) found')).toBeInTheDocument()
+    expect(screen.getByText('2 devices found · 3 rows shown')).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/scans/12/devices/', expect.anything())
 
     const rows = screen.getAllByRole('row')
@@ -96,15 +96,37 @@ describe('DevicesPage (WBS 6.0/8.0)', () => {
     ])
   })
 
-  it('searches API results by product and version', async () => {
+  it('shows TCP and UDP separately when a host uses the same port number', async () => {
+    const tcp = { ...devices[0], service_id: 10, port: 5353, protocol: 'tcp', service: 'mdns-tcp' }
+    const udp = { ...devices[0], service_id: 11, port: 5353, protocol: 'udp', service: 'mdns-udp' }
+    mockApi([scan({})], [tcp, udp])
+    render(<DevicesPage />)
+
+    expect(await screen.findByText('1 device found · 2 rows shown')).toBeInTheDocument()
+    const rows = screen.getAllByRole('row')
+    expect(rows).toHaveLength(3)
+    expect(within(rows[1]).getAllByRole('cell')[2]).toHaveTextContent('5353/tcp')
+    expect(within(rows[2]).getAllByRole('cell')[2]).toHaveTextContent('5353/udp')
+  })
+
+  it('searches across combined host and service fields, as well as product and version', async () => {
     const user = userEvent.setup()
     mockApi([scan({})])
     render(<DevicesPage />)
 
     const search = await screen.findByPlaceholderText(/search by ip, hostname, service, product, or version/i)
-    await user.type(search, 'openssh')
+    await user.type(search, 'nas.local ssh')
 
     let rows = screen.getAllByRole('row')
+    expect(rows).toHaveLength(2)
+    expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
+      '192.168.1.8', 'nas.local', '22/tcp', 'ssh', 'OpenSSH', '9.6p1',
+    ])
+
+    await user.clear(search)
+    await user.type(search, 'openssh')
+
+    rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(2)
     expect(within(rows[1]).getAllByRole('cell').map((cell) => cell.textContent)).toEqual([
       '192.168.1.8', 'nas.local', '22/tcp', 'ssh', 'OpenSSH', '9.6p1',
@@ -146,5 +168,29 @@ describe('DevicesPage (WBS 6.0/8.0)', () => {
     await user.type(await screen.findByPlaceholderText(/search by ip/i), 'no-such-device')
     expect(screen.getByText(/No devices match your search/)).toBeInTheDocument()
     expect(screen.queryByText(/No devices were found in this scan/)).not.toBeInTheDocument()
+  })
+
+  it('shows a backend scan_not_found response as an error', async () => {
+    const fetchMock = vi.fn<typeof fetch>(async (input) => {
+      if (input === '/api/scans/') return Response.json({ scans: [scan({})] })
+      return Response.json(
+        { error: { code: 'scan_not_found', message: 'Scan not found.' } },
+        { status: 404 },
+      )
+    })
+    vi.stubGlobal('fetch', fetchMock)
+    render(<DevicesPage />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Scan not found.')
+    expect(fetchMock).toHaveBeenCalledWith('/api/scans/12/devices/', expect.anything())
+  })
+
+  it('shows an error when the scan history request fails', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response('Unavailable', { status: 503 })))
+    render(<DevicesPage />)
+
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'Could not load devices. Check that the backend is running.',
+    )
   })
 })
