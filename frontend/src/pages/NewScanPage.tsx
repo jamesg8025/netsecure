@@ -70,7 +70,7 @@ function NewScanPage() {
           <button 
           type="submit" 
           disabled={scanning}
-          className = "rounded-md bg-slate-900 px-5 py-2 text-white transition-colors hover:bg-slate-800 disabled:cursor-wait disabled:opacity-70"
+          className="rounded-md bg-slate-900 px-5 py-2 text-white transition hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
            
            onMouseEnter={(e) => {
             e.currentTarget.style.backgroundColor = '#1e293b';
