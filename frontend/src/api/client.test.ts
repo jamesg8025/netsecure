@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
-import { ApiError, apiGet, listScans, type ScanSummary } from './client'
+import { ApiError, apiGet, listScanDevices, listScans, type ScanDevice, type ScanSummary } from './client'
 
 afterEach(() => {
   vi.unstubAllGlobals()
@@ -46,5 +46,26 @@ describe('listScans', () => {
 
     await expect(listScans()).resolves.toEqual(scans)
     expect(fetchMock).toHaveBeenCalledWith('/api/scans/', expect.anything())
+  })
+})
+
+describe('listScanDevices', () => {
+  it('requests device rows for the selected scan and returns them', async () => {
+    const devices: ScanDevice[] = [{
+      host_id: 7,
+      ip_address: '192.168.1.8',
+      hostname: 'nas.local',
+      service_id: 3,
+      port: 443,
+      protocol: 'tcp',
+      service: 'https',
+      product: 'nginx',
+      version: '1.24.0',
+    }]
+    const fetchMock = vi.fn(async () => Response.json({ scan_id: 12, devices }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(listScanDevices(12)).resolves.toEqual(devices)
+    expect(fetchMock).toHaveBeenCalledWith('/api/scans/12/devices/', expect.anything())
   })
 })
