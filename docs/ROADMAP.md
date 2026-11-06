@@ -42,7 +42,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 ### Frontend (WBS 6.0) · Sep 21–Oct 25
 - [x] Dashboard layout and navigation — **Izaiah**
 - [ ] Scan initiation page with target input — **Izaiah**
-- [ ] Device list view — **Izaiah**
+- [x] Device list view — **Izaiah**
 - [ ] Security findings / warnings view with severity indicators — **Izaiah**
 - [x] Scan history view — **Izaiah**
 - [ ] Scan-in-progress indicator (NFR-02) — **Izaiah**
@@ -139,3 +139,10 @@ WBS 6.0 (#14): restore the New Scan status message, align History table cells,
 and keep each Devices service's port, product, and version together. Device
 search covers host, service, product, and version fields. Focused component tests
 cover the device service rows and product/version search.
+
+### Device data integration — November 6, 2026
+
+WBS 6.0/8.0: the Devices page now loads the newest completed scan and its
+device/service rows from `GET /api/scans/` and `GET /api/scans/{id}/devices/`.
+It shows loading, error, no-completed-scan, no-device, and no-search-match
+states. Selecting older scans and broader end-to-end verification remain open.
