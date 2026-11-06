@@ -122,9 +122,9 @@ function HistoryPage() {
               <tbody className = "divide-y divide-slate-200">
                 {filteredScans.map((scan) => (
                   <tr key={scan.scan_id}>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.target}</td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{formatTimestamp(scan.timestamp)}</td>
-                    <td className = "px-6 py-4 whitespace-nowrap">
+                    <td className = "px-4 py-3 whitespace-nowrap">{scan.target}</td>
+                    <td className = "px-4 py-3 whitespace-nowrap">{formatTimestamp(scan.timestamp)}</td>
+                    <td className = "px-4 py-3 whitespace-nowrap">
                       <span className="inline-flex items-center justify-center px-2.5 py-0.5 rounded-full text-xs font-medium" style={getstatusStyle(scan.status)}>
                         {scan.status}
                       </span>
@@ -132,8 +132,8 @@ function HistoryPage() {
                         <p className = "mt-1 max-w-xs whitespace-normal text-xs text-slate-600">{scan.error_message}</p>
                       )}
                     </td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.devices_found}</td>
-                    <td className = "px-6 py-4 whitespace-nowrap">{scan.findings_found}</td>
+                    <td className = "px-4 py-3 whitespace-nowrap">{scan.devices_found}</td>
+                    <td className = "px-4 py-3 whitespace-nowrap">{scan.findings_found}</td>
                   </tr>
                 ))}
               </tbody>

@@ -132,3 +132,10 @@ WBS 6.0/8.0 (#13): the History page lists saved scans from `GET /api/scans/`,
 with loading, error, and empty states, and shows why a scan failed (NFR-04).
 Still open for UC-05: selecting a scan to see its results. Next: the Devices and
 Findings pages.
+
+### Frontend review follow-up — November 5, 2026
+
+WBS 6.0 (#14): restore the New Scan status message, align History table cells,
+and keep each Devices service's port, product, and version together. Device
+search covers host, service, product, and version fields. Focused component tests
+cover the device service rows and product/version search.

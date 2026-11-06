@@ -71,21 +71,6 @@ function NewScanPage() {
           type="submit" 
           disabled={scanning}
           className="rounded-md bg-slate-900 px-5 py-2 text-white transition hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
-           
-           onMouseEnter={(e) => {
-            e.currentTarget.style.backgroundColor = '#1e293b';
-           }}
-           onMouseLeave={(e) => {
-            e.currentTarget.style.backgroundColor = '#0f172a';
-            e.currentTarget.style.transform = 'scale(1)';
-           }}
-           onMouseDown={(e) => {
-            e.currentTarget.style.backgroundColor = '#334155';
-            e.currentTarget.style.transform = 'scale(0.97)';
-           }}
-           onMouseUp={(e) => {
-            e.currentTarget.style.transform = 'scale(1)';
-           }}
            >
             {scanning ? 'Scanning…' : 'Start Scan'}
           </button>
