@@ -70,7 +70,7 @@ function NewScanPage() {
           <button 
           type="submit" 
           disabled={scanning}
-          className="rounded-md bg-slate-900 px-5 py-2 text-white transition hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
+          className="cursor-pointer rounded-md bg-slate-900 px-5 py-2 text-white transition enabled:hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
            >
             {scanning ? 'Scanning…' : 'Start Scan'}
           </button>

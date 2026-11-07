@@ -155,3 +155,7 @@ remain open.
 WBS 6.0 (#16): Findings search includes the port, trims/tokenizes the query,
 and uses the visible row hover treatment. A Service-column test covers its
 rendering. Findings API integration remains open.
+
+### Scan button cleanup — November 6, 2026
+
+WBS 6.0 (#16): the Start Scan button has pointer and enabled-hover styling.

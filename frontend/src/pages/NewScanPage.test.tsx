@@ -31,6 +31,15 @@ describe('NewScanPage', () => {
     vi.unstubAllGlobals()
   })
 
+  it('uses a pointer cursor and enabled hover styling for the scan button', () => {
+    render(<NewScanPage />)
+
+    expect(screen.getByRole('button', { name: 'Start Scan' })).toHaveClass(
+      'cursor-pointer',
+      'enabled:hover:bg-slate-800',
+    )
+  })
+
   it('posts the target with a CSRF token and lists the results', async () => {
     const fetchMock = mockBackend({
       status: 200,
