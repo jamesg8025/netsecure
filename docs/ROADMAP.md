@@ -149,3 +149,9 @@ states. Its summary distinguishes unique devices from displayed rows; search
 matches combined host and service fields. Tests cover API errors including
 `scan_not_found`. Selecting older scans and broader end-to-end verification
 remain open.
+
+### Findings cleanup — November 6, 2026
+
+WBS 6.0 (#16): Findings search includes the port, trims/tokenizes the query,
+and uses the visible row hover treatment. A Service-column test covers its
+rendering. Findings API integration remains open.

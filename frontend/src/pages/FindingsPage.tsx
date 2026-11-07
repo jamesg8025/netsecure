@@ -55,12 +55,12 @@ const sampleFindings: Finding[] = [
 function FindingsPage() {
   const [search, setSearch] = useState('')
   const [severityFilter, setSeverityFilter] = useState ("All")
+  const searchTerms = search.trim().toLowerCase().split(/\s+/).filter(Boolean)
 
   const filteredFindings = sampleFindings.filter((finding) => {
-    const matchesSearch = 
-    `${finding.title} ${finding.ip} ${finding.service} ${finding.description}`
-    .toLowerCase()
-    .includes(search.toLowerCase())
+    const searchText = `${finding.title} ${finding.ip} ${finding.port} ${finding.service} ${finding.description}`
+      .toLowerCase()
+    const matchesSearch = searchTerms.every((term) => searchText.includes(term))
 
     const matchesSeverity = severityFilter === "All" || finding.severity === severityFilter
 
@@ -135,7 +135,7 @@ function FindingsPage() {
 
               <tbody className = "divide-y divide-slate-200">
                 {filteredFindings.map((finding) => (
-                  <tr key={finding.id} className = "hover:bg-slate-50">
+                  <tr key={finding.id} className = "hover:bg-slate-100">
                     <td className = "whitespace-nowrap px-4 py-3">
                       <span
                         className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
