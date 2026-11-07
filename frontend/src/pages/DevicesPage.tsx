@@ -20,6 +20,7 @@ function deviceMatchesSearch(device: ScanDevice, query: string) {
     device.hostname,
     device.port?.toString(),
     device.protocol,
+    device.port !== null && device.protocol ? `${device.port}/${device.protocol}` : null,
     device.service,
     device.product,
     device.version,
