@@ -24,8 +24,9 @@ function deviceMatchesSearch(device: ScanDevice, query: string) {
     device.product,
     device.version,
   ].filter(Boolean).join(' ').toLowerCase()
+  const searchTerms = query.split(/\s+/).filter(Boolean)
 
-  return searchText.includes(query)
+  return searchTerms.every((term) => searchText.includes(term))
 }
 
 function DevicesPage() {
