@@ -43,7 +43,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 - [x] Dashboard layout and navigation — **Izaiah**
 - [ ] Scan initiation page with target input — **Izaiah**
 - [x] Device list view — **Izaiah**
-- [ ] Security findings / warnings view with severity indicators — **Izaiah**
+- [x] Security findings / warnings view with severity indicators — **Izaiah**
 - [x] Scan history view — **Izaiah**
 - [ ] Scan-in-progress indicator (NFR-02) — **Izaiah**
 
@@ -167,3 +167,11 @@ WBS 6.0/8.0 (#16, UC-05): History links each completed scan to its devices
 completed scan. An unknown scan, or one that failed or hasn't finished, gets a
 message and a link back to History. The shared `useSelectedScan` hook will also
 serve Findings. Findings API integration remains open.
+
+### Findings data integration — November 7, 2026
+
+WBS 6.0/8.0 (#16, UC-04): Findings loads the chosen scan's findings from
+`GET /api/scans/{id}/findings/` through the same hook, and History links each
+completed scan to them. Severities map to labels, with an Info level. Nothing
+stores findings until the rule engine lands (WBS 7.0), so the empty state says
+an empty list doesn't mean the network is safe.
