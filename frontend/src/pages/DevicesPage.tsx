@@ -1,18 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import PageHeader from '../components/PageHeader'
-import { ApiError, listScanDevices, listScans, type ScanDevice, type ScanSummary } from '../api/client'
-
-type LoadState =
-  | { kind: 'loading' }
-  | { kind: 'error'; message: string }
-  | { kind: 'no-scan' }
-  | { kind: 'ready'; scan: ScanSummary; devices: ScanDevice[] }
+import { SelectedScanHeading, SelectedScanMessage } from '../components/SelectedScan'
+import { listScanDevices, type ScanDevice } from '../api/client'
+import { useSelectedScan } from '../hooks/useSelectedScan'
 
 const LOAD_ERROR = 'Could not load devices. Check that the backend is running.'
-
-function formatTimestamp(timestamp: string | null) {
-  return timestamp ? new Date(timestamp).toLocaleString() : 'Unknown time'
-}
 
 function deviceMatchesSearch(device: ScanDevice, query: string) {
   const searchText = [
@@ -32,36 +24,9 @@ function deviceMatchesSearch(device: ScanDevice, query: string) {
 
 function DevicesPage() {
   const [search, setSearch] = useState('')
-  const [load, setLoad] = useState<LoadState>({ kind: 'loading' })
+  const selection = useSelectedScan(listScanDevices, LOAD_ERROR)
 
-  useEffect(() => {
-    const controller = new AbortController()
-
-    async function loadLatestDevices() {
-      try {
-        const scans = await listScans(controller.signal)
-        // History is newest first. Skip pending/failed scans and show the
-        // newest scan whose results are complete.
-        const scan = scans.find((item) => item.status === 'Completed')
-        if (!scan) {
-          setLoad({ kind: 'no-scan' })
-          return
-        }
-
-        const devices = await listScanDevices(scan.scan_id, controller.signal)
-        setLoad({ kind: 'ready', scan, devices })
-      } catch (err: unknown) {
-        if (controller.signal.aborted) return
-        const message = err instanceof ApiError && err.code ? err.message : LOAD_ERROR
-        setLoad({ kind: 'error', message })
-      }
-    }
-
-    void loadLatestDevices()
-    return () => controller.abort()
-  }, [])
-
-  const devices = load.kind === 'ready' ? load.devices : []
+  const devices = selection.kind === 'ready' ? selection.data : []
   const query = search.trim().toLowerCase()
   const filteredDevices = devices.filter((device) => deviceMatchesSearch(device, query))
   const hostCount = new Set(filteredDevices.map((device) => device.host_id)).size
@@ -70,27 +35,15 @@ function DevicesPage() {
     <>
       <PageHeader
         title="Devices"
-        description="Hosts discovered by the most recent completed scan, with their open ports and services."
+        description="Hosts a scan discovered, with their open ports and services. Shows the newest completed scan unless you choose one in History."
       />
 
       <section className="mt-6">
-        {load.kind === 'loading' ? (
-          <p role="status" className="rounded-md border border-slate-200 p-6 text-slate-600">
-            Loading devices…
-          </p>
-        ) : load.kind === 'error' ? (
-          <p role="alert" className="rounded-md border border-red-200 bg-red-50 p-6 text-red-700">
-            {load.message}
-          </p>
-        ) : load.kind === 'no-scan' ? (
-          <p className="rounded-md border border-slate-200 p-6 text-slate-600">
-            No completed scans yet. Run a scan from New Scan and its devices will appear here.
-          </p>
+        {selection.kind !== 'ready' ? (
+          <SelectedScanMessage selection={selection} noun="devices" />
         ) : (
           <>
-            <p className="mb-4 text-sm text-slate-600">
-              Showing scan #{load.scan.scan_id} for {load.scan.target}, completed {formatTimestamp(load.scan.finished_at)}.
-            </p>
+            <SelectedScanHeading scan={selection.scan} />
 
             <div className="mb-4 flex flex-wrap items-center gap-3">
               <input

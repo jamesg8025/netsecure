@@ -159,3 +159,11 @@ rendering. Findings API integration remains open.
 ### Scan button cleanup — November 6, 2026
 
 WBS 6.0 (#16): the Start Scan button has pointer and enabled-hover styling.
+
+### Scan selection — November 7, 2026
+
+WBS 6.0/8.0 (#16, UC-05): History links each completed scan to its devices
+(`/devices?scan=<id>`). Without `?scan=`, Devices still shows the newest
+completed scan. An unknown scan, or one that failed or hasn't finished, gets a
+message and a link back to History. The shared `useSelectedScan` hook will also
+serve Findings. Findings API integration remains open.
