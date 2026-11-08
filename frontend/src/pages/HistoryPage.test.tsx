@@ -35,6 +35,7 @@ function renderPage() {
     [
       { path: '/history', element: <HistoryPage /> },
       { path: '/devices', element: <h1>Devices</h1> },
+      { path: '/findings', element: <h1>Findings</h1> },
     ],
     { initialEntries: ['/history'] },
   )
@@ -66,7 +67,7 @@ describe('HistoryPage', () => {
 
     const [newest, oldest] = rows()
     const cells = within(newest).getAllByRole('cell').map((cell) => cell.textContent)
-    expect(cells).toEqual(['10.0.0.5', new Date(COMPLETED_AT).toLocaleString(), 'Completed', '7', '3', 'View devices'])
+    expect(cells).toEqual(['10.0.0.5', new Date(COMPLETED_AT).toLocaleString(), 'Completed', '7', '3', 'View devicesView findings'])
     expect(oldest).toHaveTextContent('192.168.1.1')
   })
 
@@ -201,6 +202,18 @@ describe('HistoryPage', () => {
     await user.click(within(completed).getByRole('link', { name: 'View devices for scan #2' }))
 
     expect(router.state.location.pathname).toBe('/devices')
+    expect(router.state.location.search).toBe('?scan=2')
+  })
+
+  it("opens a completed scan's findings", async () => {
+    const user = userEvent.setup()
+    mockScans([scan({ scan_id: 2, target: '10.0.0.5' })])
+    const { router } = renderPage()
+    await screen.findByText('1 scan(s) found.')
+
+    await user.click(screen.getByRole('link', { name: 'View findings for scan #2' }))
+
+    expect(router.state.location.pathname).toBe('/findings')
     expect(router.state.location.search).toBe('?scan=2')
   })
 
