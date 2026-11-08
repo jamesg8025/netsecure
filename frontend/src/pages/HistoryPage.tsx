@@ -139,13 +139,22 @@ function HistoryPage() {
                     <td className = "px-4 py-3 whitespace-nowrap">
                       {/* Only a completed scan has results to open (UC-05). */}
                       {scan.status === 'Completed' ? (
-                        <Link
-                          to={`/devices?scan=${scan.scan_id}`}
-                          aria-label={`View devices for scan #${scan.scan_id}`}
-                          className="font-medium text-blue-600 hover:underline"
-                        >
-                          View devices
-                        </Link>
+                        <span className="flex gap-3">
+                          <Link
+                            to={`/devices?scan=${scan.scan_id}`}
+                            aria-label={`View devices for scan #${scan.scan_id}`}
+                            className="font-medium text-blue-600 hover:underline"
+                          >
+                            View devices
+                          </Link>
+                          <Link
+                            to={`/findings?scan=${scan.scan_id}`}
+                            aria-label={`View findings for scan #${scan.scan_id}`}
+                            className="font-medium text-blue-600 hover:underline"
+                          >
+                            View findings
+                          </Link>
+                        </span>
                       ) : (
                         '—'
                       )}

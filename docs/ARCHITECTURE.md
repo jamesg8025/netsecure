@@ -61,9 +61,11 @@ As of initial scaffold:
 
 - **`frontend/`** — Dashboard shell: sidebar layout with React Router routes for
   New Scan, Devices, Findings, and History. New Scan calls `POST /api/scans/`,
-  History lists `GET /api/scans/` and links each completed scan to its devices,
-  and Devices shows `GET /api/scans/{id}/devices/` for the scan in `?scan=<id>`
-  or, without it, the newest completed scan; Findings still shows sample data. Vite
+  History lists `GET /api/scans/` and links each completed scan to its devices
+  and findings. Devices and Findings show `GET /api/scans/{id}/devices/` and
+  `/findings/` for the scan in `?scan=<id>` or, without it, the newest completed
+  scan (shared `useSelectedScan` hook). Findings stays empty until the rule engine
+  stores findings (WBS 7.0). Vite
   proxies `/api` to Django in development; the header shows backend health from
   `GET /api/health/`. Tests run with Vitest + React Testing Library.
 - **`backend/`** — Django 6.1 project initialized (`config/` project package,
