@@ -1,5 +1,7 @@
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { createMemoryRouter } from 'react-router'
+import { RouterProvider } from 'react-router/dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import type { ScanSummary } from '../api/client'
 import HistoryPage from './HistoryPage'
@@ -27,6 +29,18 @@ function mockScans(scans: ScanSummary[]) {
   return fetchMock
 }
 
+// The page links to Devices, so it needs a router.
+function renderPage() {
+  const router = createMemoryRouter(
+    [
+      { path: '/history', element: <HistoryPage /> },
+      { path: '/devices', element: <h1>Devices</h1> },
+    ],
+    { initialEntries: ['/history'] },
+  )
+  return { router, ...render(<RouterProvider router={router} />) }
+}
+
 // The table's body rows, without the header row.
 function rows() {
   return screen.getAllByRole('row').slice(1)
@@ -43,7 +57,7 @@ describe('HistoryPage', () => {
       scan({ scan_id: 1, target: '192.168.1.1' }),
     ])
 
-    render(<HistoryPage />)
+    renderPage()
 
     expect(screen.getByRole('status')).toHaveTextContent('Loading scans…')
     expect(await screen.findByText('2 scan(s) found.')).toBeInTheDocument()
@@ -52,13 +66,13 @@ describe('HistoryPage', () => {
 
     const [newest, oldest] = rows()
     const cells = within(newest).getAllByRole('cell').map((cell) => cell.textContent)
-    expect(cells).toEqual(['10.0.0.5', new Date(COMPLETED_AT).toLocaleString(), 'Completed', '7', '3'])
+    expect(cells).toEqual(['10.0.0.5', new Date(COMPLETED_AT).toLocaleString(), 'Completed', '7', '3', 'View devices'])
     expect(oldest).toHaveTextContent('192.168.1.1')
   })
 
   it('tells "no scans yet" apart from "no scans match"', async () => {
     mockScans([])
-    render(<HistoryPage />)
+    renderPage()
 
     expect(await screen.findByText(/No scans yet/)).toBeInTheDocument()
     expect(screen.queryByText(/No scans match/)).not.toBeInTheDocument()
@@ -68,7 +82,7 @@ describe('HistoryPage', () => {
   it('shows "no scans match" when the search excludes every scan', async () => {
     const user = userEvent.setup()
     mockScans([scan({})])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('1 scan(s) found.')
 
     await user.type(screen.getByPlaceholderText('Search scans...'), 'nothing-like-this')
@@ -80,7 +94,7 @@ describe('HistoryPage', () => {
   it('searches by target', async () => {
     const user = userEvent.setup()
     mockScans([scan({ scan_id: 2, target: '10.0.0.5' }), scan({ scan_id: 1, target: '192.168.1.1' })])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('2 scan(s) found.')
 
     await user.type(screen.getByPlaceholderText('Search scans...'), '10.0')
@@ -95,7 +109,7 @@ describe('HistoryPage', () => {
       scan({ scan_id: 2, target: '10.0.0.5', status: 'Failed', error_message: 'Nmap failed.' }),
       scan({ scan_id: 1, target: '192.168.1.1' }),
     ])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('2 scan(s) found.')
 
     await user.selectOptions(screen.getByRole('combobox'), 'Failed')
@@ -110,7 +124,7 @@ describe('HistoryPage', () => {
       scan({ scan_id: 2, target: '10.0.0.5', timestamp: null, finished_at: null, status: 'Pending' }),
       scan({ scan_id: 1, target: '192.168.1.1' }),
     ])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('2 scan(s) found.')
 
     await user.selectOptions(screen.getByRole('combobox'), 'Pending')
@@ -124,7 +138,7 @@ describe('HistoryPage', () => {
       scan({ scan_id: 2, target: '10.0.0.5', status: 'Failed', error_message: 'Nmap could not be run.' }),
       scan({ scan_id: 1, target: '192.168.1.1' }),
     ])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('2 scan(s) found.')
 
     const [failed, completed] = rows()
@@ -138,7 +152,7 @@ describe('HistoryPage', () => {
       scan({ scan_id: 2, target: '10.0.0.5', timestamp: null, finished_at: null, status: 'Pending' }),
       scan({ scan_id: 1, target: '192.168.1.1' }),
     ])
-    render(<HistoryPage />)
+    renderPage()
     await screen.findByText('2 scan(s) found.')
 
     expect(rows()[0]).toHaveTextContent('Not started')
@@ -156,7 +170,7 @@ describe('HistoryPage', () => {
       { status: 500 },
     )))
 
-    render(<HistoryPage />)
+    renderPage()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Something went wrong on the server.')
     expect(screen.queryByText(/No scans yet/)).not.toBeInTheDocument()
@@ -168,15 +182,32 @@ describe('HistoryPage', () => {
   ])('shows a friendly message when %s', async (_name, impl) => {
     vi.stubGlobal('fetch', vi.fn(impl))
 
-    render(<HistoryPage />)
+    renderPage()
 
     expect(await screen.findByRole('alert')).toHaveTextContent('Could not load scan history.')
+  })
+
+  it("opens a completed scan's devices, and offers no link for other scans (UC-05)", async () => {
+    const user = userEvent.setup()
+    mockScans([
+      scan({ scan_id: 3, target: '10.0.0.7', status: 'Failed', error_message: 'Nmap failed.' }),
+      scan({ scan_id: 2, target: '10.0.0.5' }),
+    ])
+    const { router } = renderPage()
+    await screen.findByText('2 scan(s) found.')
+
+    const [failed, completed] = rows()
+    expect(within(failed).queryByRole('link')).not.toBeInTheDocument()
+    await user.click(within(completed).getByRole('link', { name: 'View devices for scan #2' }))
+
+    expect(router.state.location.pathname).toBe('/devices')
+    expect(router.state.location.search).toBe('?scan=2')
   })
 
   it('cancels the request when the page unmounts', () => {
     const fetchMock = mockScans([])
 
-    const { unmount } = render(<HistoryPage />)
+    const { unmount } = renderPage()
     const signal = fetchMock.mock.calls[0][1]!.signal!
     expect(signal.aborted).toBe(false)
 

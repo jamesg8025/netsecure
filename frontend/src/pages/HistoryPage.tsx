@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { Link } from 'react-router'
 import PageHeader from '../components/PageHeader'
 import { ApiError, listScans, type ScanStatus, type ScanSummary } from '../api/client'
 
@@ -117,6 +118,7 @@ function HistoryPage() {
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Devices Found</th>
                   <th className="px-4 py-3">Findings Found</th>
+                  <th className="px-4 py-3">Results</th>
                 </tr>
               </thead>
               <tbody className = "divide-y divide-slate-200">
@@ -134,6 +136,20 @@ function HistoryPage() {
                     </td>
                     <td className = "px-4 py-3 whitespace-nowrap">{scan.devices_found}</td>
                     <td className = "px-4 py-3 whitespace-nowrap">{scan.findings_found}</td>
+                    <td className = "px-4 py-3 whitespace-nowrap">
+                      {/* Only a completed scan has results to open (UC-05). */}
+                      {scan.status === 'Completed' ? (
+                        <Link
+                          to={`/devices?scan=${scan.scan_id}`}
+                          aria-label={`View devices for scan #${scan.scan_id}`}
+                          className="font-medium text-blue-600 hover:underline"
+                        >
+                          View devices
+                        </Link>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                   </tr>
                 ))}
               </tbody>
