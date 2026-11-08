@@ -143,3 +143,27 @@ export async function listScanDevices(scanId: number, signal?: AbortSignal): Pro
   )
   return devices
 }
+
+export type FindingSeverity = 'info' | 'low' | 'medium' | 'high' | 'critical'
+
+// One row of GET /api/scans/{id}/findings/.
+export type ScanFinding = {
+  finding_id: number
+  severity: FindingSeverity
+  // The finding's title; the backend fills in "Untitled finding" when it has none.
+  finding: string
+  host: string
+  port: number
+  protocol: string
+  service: string | null
+  description: string
+}
+
+// Findings for one scan, most severe first.
+export async function listScanFindings(scanId: number, signal?: AbortSignal): Promise<ScanFinding[]> {
+  const { findings } = await apiGet<{ scan_id: number; findings: ScanFinding[] }>(
+    `/scans/${scanId}/findings/`,
+    signal,
+  )
+  return findings
+}
