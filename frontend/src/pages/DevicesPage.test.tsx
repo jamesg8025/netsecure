@@ -159,6 +159,18 @@ describe('DevicesPage (WBS 6.0/8.0)', () => {
     ])
   })
 
+  it('finds a service by port and protocol as the table shows them', async () => {
+    const user = userEvent.setup()
+    mockApi([scan({})])
+    renderPage()
+
+    await user.type(await screen.findByPlaceholderText(/search by ip/i), '443/tcp')
+
+    const rows = screen.getAllByRole('row')
+    expect(rows).toHaveLength(2)
+    expect(within(rows[1]).getAllByRole('cell')[2]).toHaveTextContent('443/tcp')
+  })
+
   it('shows a helpful empty state when no completed scan exists', async () => {
     const fetchMock = mockApi([
       scan({ scan_id: 13, status: 'Failed', error_message: 'Scan failed.' }),
