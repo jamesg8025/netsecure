@@ -120,3 +120,26 @@ export async function listScans(signal?: AbortSignal): Promise<ScanSummary[]> {
   const { scans } = await apiGet<{ scans: ScanSummary[] }>('/scans/', signal)
   return scans
 }
+
+// One device/service row returned by GET /api/scans/{id}/devices/.
+export type ScanDevice = {
+  host_id: number
+  ip_address: string
+  hostname: string | null
+  service_id: number | null
+  port: number | null
+  protocol: string | null
+  service: string | null
+  product: string | null
+  version: string | null
+}
+
+// Rows are ordered by host and service by the backend. Hosts without open
+// services still have one row, with the service fields set to null.
+export async function listScanDevices(scanId: number, signal?: AbortSignal): Promise<ScanDevice[]> {
+  const { devices } = await apiGet<{ scan_id: number; devices: ScanDevice[] }>(
+    `/scans/${scanId}/devices/`,
+    signal,
+  )
+  return devices
+}

@@ -121,7 +121,7 @@ function HistoryPage() {
               </thead>
               <tbody className = "divide-y divide-slate-200">
                 {filteredScans.map((scan) => (
-                  <tr key={scan.scan_id}>
+                  <tr key={scan.scan_id} className="hover:bg-slate-100">
                     <td className = "px-4 py-3 whitespace-nowrap">{scan.target}</td>
                     <td className = "px-4 py-3 whitespace-nowrap">{formatTimestamp(scan.timestamp)}</td>
                     <td className = "px-4 py-3 whitespace-nowrap">
