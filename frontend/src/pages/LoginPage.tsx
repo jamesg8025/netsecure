@@ -9,6 +9,8 @@ function LoginPage() {
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  // Fields to mark aria-invalid: only the ones the current error is about.
+  const [invalidFields, setInvalidFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
