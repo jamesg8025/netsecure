@@ -35,7 +35,7 @@ def evaluate_service(*, port, protocol, service_name):
             'This rule does not verify TLS, redirect behavior, authentication, or an exploitable vulnerability.',
         )
     elif name == 'telnet' and port != 992:
-        warning = Warning(
+        warning = RuleMatch(
             'TELNET-001', 'high', 'Review legacy Telnet access',
             observation + 'Telnet commonly uses unencrypted remote sessions. Prefer SSH and restrict '
             'access to trusted administrators. Encryption and login policy were not tested.',
