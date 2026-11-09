@@ -43,7 +43,7 @@ function LoginPage() {
       } else if (cause instanceof ApiError && cause.status < 500) {
         setError(cause.message)
       } else {
-        setError(LOGIN_ERROR)
+        setError(CONNECTION_ERROR)
       }
     } finally {
       setSubmitting(false)
