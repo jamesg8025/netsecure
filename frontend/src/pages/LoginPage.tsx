@@ -2,7 +2,7 @@ import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { ApiError, login } from '../api/client'
 
-const LOGIN_ERROR = 'Could not reach NetSecure. Check that the backend is running and try again.'
+const CONNECTION_ERROR = 'Could not reach NetSecure. Check that the backend is running and try again.'
 
 function LoginPage() {
   const navigate = useNavigate()
