@@ -27,6 +27,7 @@ function LoginPage() {
     }
 
     setError('')
+    setInvalidFields([])
     setSubmitting(true)
     try {
       await login(username, password)
