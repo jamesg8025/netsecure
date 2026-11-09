@@ -29,7 +29,7 @@ def evaluate_service(*, port, protocol, service_name):
         return []
     observation = f'Nmap reported {name} on TCP port {port}. '
     if name in {'http', 'http-proxy'} and port in HTTP_REVIEW_PORTS:
-        warning = Warning(
+        warning = RuleMatch(
             'HTTP-001', 'low', 'Review HTTP transport protection',
             observation + 'Review HTTPS enforcement and redirects before sending sensitive data. '
             'This rule does not verify TLS, redirect behavior, authentication, or an exploitable vulnerability.',
