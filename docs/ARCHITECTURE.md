@@ -142,6 +142,15 @@ Implemented in `backend/api/errors.py` (format and middleware),
 `backend/api/validation.py` (request body checks), and `backend/api/targets.py`
 (the single scan-target validation point).
 
+## Service-review findings (feature branch)
+
+`backend/api/rules.py` evaluates detected TCP services. `scan_store.save_results`
+saves generated findings alongside hosts/services in the same transaction before
+marking a scan completed. The existing per-scan findings and history endpoints
+expose the results. No schema migration or scanner invocation change is required.
+See `SECURITY_RULES.md` for rules, severities and detection limits. Older saved
+scans are not backfilled; a new scan applies the rules.
+
 ## Deployment Environment
 
 - **Runtime:** Ubuntu Linux VM (VirtualBox) — NFR-06
