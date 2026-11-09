@@ -8,7 +8,7 @@ from dataclasses import dataclass
 
 
 @dataclass(frozen=True)
-class Warning:
+class RuleMatch:
     rule_id: str
     severity: str
     title: str
