@@ -3,6 +3,7 @@ import {
   ApiError,
   apiGet,
   apiPost,
+  clearCsrfToken,
   listScanDevices,
   listScanFindings,
   listScans,
