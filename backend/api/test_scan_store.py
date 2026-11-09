@@ -141,6 +141,9 @@ class QueryTests(TestCase):
         self.user = get_user_model().objects.create_user('matt')
         self.scan = running_scan(user=self.user)
         scan_store.save_results(self.scan, SCANNER_HOSTS)
+        # Query/SQL equivalence uses the explicit findings fixture below;
+        # generated-rule integration is covered in test_rules.py.
+        Finding.objects.all().delete()
         http = Service.objects.get(port=80)
         dns = Service.objects.get(port=53, protocol='udp')
         Finding.objects.create(service=dns, severity='low', description='DNS answers queries.')

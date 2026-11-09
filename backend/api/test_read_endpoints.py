@@ -24,6 +24,9 @@ def completed_scan(hosts=HOSTS, target='192.168.1.0/24'):
     scan = scan_store.create_scan(target)
     scan_store.start_scan(scan)
     scan_store.save_results(scan, hosts)
+    # These read-endpoint tests seed their own exact finding sets.
+    # API-created scan/rule integration is exercised in test_rules.py.
+    Finding.objects.filter(service__host__scan=scan).delete()
     return scan
 
 
