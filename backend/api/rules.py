@@ -53,7 +53,7 @@ def evaluate_service(*, port, protocol, service_name):
             'submission. Device identity, authentication, and printing behavior were not tested.',
         )
     elif name == 'ssh':
-        warning = Warning(
+        warning = RuleMatch(
             'SSH-001', 'info', 'Review remote administration access',
             observation + 'Confirm that only approved administrators can reach and sign in to this service. '
             'SSH availability alone is not a vulnerability; credentials and configuration were not tested.',
