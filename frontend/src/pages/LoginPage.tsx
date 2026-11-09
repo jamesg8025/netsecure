@@ -94,9 +94,10 @@ function LoginPage() {
               onChange={(event) => {
                 setPassword(event.target.value)
                 setError('')
+                setInvalidFields([])
               }}
               disabled={submitting}
-              aria-invalid={Boolean(error)}
+              aria-invalid={invalidFields.includes('password')}
               aria-describedby={error ? 'login-error' : undefined}
               className="w-full rounded-md border border-slate-300 px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-slate-100"
             />
