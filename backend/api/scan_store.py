@@ -24,6 +24,7 @@ from django.db.models import Case, Count, IntegerField, Value, When
 from django.utils import timezone
 
 from .models import Finding, Host, Scan, Service
+from .rules import evaluate_service
 
 
 class ScanStateError(Exception):
@@ -58,7 +59,7 @@ def start_scan(scan):
 
 def save_results(scan, hosts):
     """
-    Save the scanner's host list and mark the scan completed, all at once.
+    Save hosts, services and rule findings, then complete the scan atomically.
 
     `hosts` is scan_target()'s return value:
         [{"ip", "hostname", "services": [{"port", "protocol", "service", "product", "version"}]}]
@@ -86,6 +87,22 @@ def save_results(scan, hosts):
                 for service in host.get('services', [])
             ]
             Service.objects.bulk_create(services)
+            # SQLite returns generated service IDs from bulk_create. Findings
+            # belong to those exact rows and share the result transaction.
+            Finding.objects.bulk_create([
+                Finding(
+                    service=service_row,
+                    severity=warning.severity,
+                    title=f'{warning.rule_id}: {warning.title}',
+                    description=warning.description,
+                )
+                for service_row in services
+                for warning in evaluate_service(
+                    port=service_row.port,
+                    protocol=service_row.protocol,
+                    service_name=service_row.service_name,
+                )
+            ])
             service_count += len(services)
 
         finished_at = _now()

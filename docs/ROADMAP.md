@@ -176,6 +176,15 @@ completed scan to them. Severities map to labels, with an Info level. Nothing
 stores findings until the rule engine lands (WBS 7.0), so the empty state says
 an empty list doesn't mean the network is safe.
 
+### Service-review findings — November 8, 2026 (feature branch)
+
+WBS 7.0, FR-05/FR-06: `backend/service-findings` implements five conservative
+service-review rules, atomic finding storage with scan results, and updated
+Findings guidance. See `SECURITY_RULES.md` for matches, severities, exclusions,
+and testing. The feature branch awaits team review/merge; the main-branch
+checkboxes remain unchanged until review. The login screen and approved-user
+scan access control remain separate WBS 9.0 work.
+
 ### Login backend — November 8, 2026
 
 WBS 9.0 (UC-01): `POST /api/auth/login/`, `POST /api/auth/logout/`, and

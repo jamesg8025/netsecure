@@ -58,16 +58,19 @@ function FindingsPage() {
         ) : findings.length === 0 ? (
           <>
             <SelectedScanHeading scan={selection.scan} />
-            {/* No code stores findings until the rule engine lands (WBS 7.0).
-                Revisit this message then. */}
             <p className="rounded-md border border-slate-200 p-6 text-slate-600">
-              No findings for this scan. Security checks don't generate findings yet, so this
-              doesn't mean the network is safe.
+              No findings for this scan. This doesn't mean the network is safe.
+              Scans saved before service checks were added have no generated findings; run a new scan to apply them.
             </p>
           </>
         ) : (
           <>
             <SelectedScanHeading scan={selection.scan} />
+
+            <p className="mb-4 text-sm text-slate-600">
+              These are service-review warnings, not confirmed vulnerabilities. Authentication,
+              exploitation, and CVE checks were not performed.
+            </p>
 
             <div className='mb-4 flex flex-wrap items-center gap-3'>
               <input
