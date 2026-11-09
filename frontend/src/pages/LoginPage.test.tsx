@@ -4,10 +4,14 @@ import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
 import { clearCsrfToken } from '../api/client'
+import { AuthProvider } from '../auth/AuthContext'
 import { routes } from '../routes'
 
 function mockBackend(reply: Response | Promise<Response>) {
   const fetchMock = vi.fn<typeof fetch>(async (input) => {
+    if (input === '/api/auth/me/') {
+      return Response.json({ error: { code: 'not_authenticated' } }, { status: 401 })
+    }
     if (input === '/api/csrf/') return Response.json({ csrfToken: 'csrf-before-login' })
     if (input === '/api/auth/login/') return await reply
     if (input === '/api/health/') return Response.json({ status: 'ok' })
@@ -17,9 +21,10 @@ function mockBackend(reply: Response | Promise<Response>) {
   return fetchMock
 }
 
-function renderLogin() {
+async function renderLogin() {
   const router = createMemoryRouter(routes, { initialEntries: ['/login'] })
-  render(<RouterProvider router={router} />)
+  render(<AuthProvider><RouterProvider router={router} /></AuthProvider>)
+  await screen.findByRole('heading', { name: 'Log in' })
   return router
 }
 
@@ -43,20 +48,20 @@ describe('LoginPage (WBS 6.0/9.0, UC-01)', () => {
   ])('validates blank fields without sending credentials', async ({ username, password, error }) => {
     const user = userEvent.setup()
     const fetchMock = mockBackend(loginSuccess())
-    renderLogin()
+    await renderLogin()
 
     if (username) await user.type(screen.getByLabelText('Username'), username)
     if (password) await user.type(screen.getByLabelText('Password'), password)
     await user.click(screen.getByRole('button', { name: 'Log in' }))
 
     expect(screen.getByRole('alert')).toHaveTextContent(error)
-    expect(fetchMock).not.toHaveBeenCalled()
+    expect(fetchMock.mock.calls.map(([input]) => input)).toEqual(['/api/auth/me/'])
   })
 
   it('logs in and redirects to the dashboard', async () => {
     const user = userEvent.setup()
     const fetchMock = mockBackend(loginSuccess())
-    const router = renderLogin()
+    const router = await renderLogin()
 
     await user.type(screen.getByLabelText('Username'), 'izaiah')
     await user.type(screen.getByLabelText('Password'), 'secret')
@@ -73,7 +78,7 @@ describe('LoginPage (WBS 6.0/9.0, UC-01)', () => {
       { error: { code: 'invalid_credentials', message: 'Incorrect username or password.' } },
       { status: 401 },
     ))
-    renderLogin()
+    await renderLogin()
 
     await user.type(screen.getByLabelText('Username'), 'izaiah')
     await user.type(screen.getByLabelText('Password'), 'wrong')
@@ -87,7 +92,7 @@ describe('LoginPage (WBS 6.0/9.0, UC-01)', () => {
     const user = userEvent.setup()
     let resolveLogin!: (response: Response) => void
     mockBackend(new Promise<Response>((resolve) => { resolveLogin = resolve }))
-    renderLogin()
+    await renderLogin()
 
     await user.type(screen.getByLabelText('Username'), 'izaiah')
     await user.type(screen.getByLabelText('Password'), 'secret')
@@ -107,7 +112,7 @@ describe('LoginPage (WBS 6.0/9.0, UC-01)', () => {
       if (input === '/api/csrf/') return Response.json({ csrfToken: 'csrf-before-login' })
       throw new TypeError('Failed to fetch')
     }))
-    renderLogin()
+    await renderLogin()
 
     await user.type(screen.getByLabelText('Username'), 'izaiah')
     await user.type(screen.getByLabelText('Password'), 'secret')

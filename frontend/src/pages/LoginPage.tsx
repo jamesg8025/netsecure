@@ -1,17 +1,35 @@
 import { useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
-import { ApiError, login } from '../api/client'
+import { Navigate, useLocation, useNavigate } from 'react-router'
+import { ApiError } from '../api/client'
+import { useAuth } from '../auth/useAuth'
 
 const CONNECTION_ERROR = 'Could not reach NetSecure. Check that the backend is running and try again.'
 
 function LoginPage() {
   const navigate = useNavigate()
+  const location = useLocation()
+  const { user, loading, login } = useAuth()
   const [username, setUsername] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
   // Fields to mark aria-invalid: only the ones the current error is about.
   const [invalidFields, setInvalidFields] = useState<string[]>([])
   const [submitting, setSubmitting] = useState(false)
+  const requestedLocation = (location.state as { from?: { pathname?: string; search?: string; hash?: string } } | null)?.from
+  const requestedPath = requestedLocation?.pathname ?? ''
+  const destination = requestedPath.startsWith('/') && !requestedPath.startsWith('//')
+    ? `${requestedPath}${requestedLocation?.search ?? ''}${requestedLocation?.hash ?? ''}`
+    : '/scan'
+
+  if (loading) {
+    return (
+      <main role="status" className="flex min-h-screen items-center justify-center bg-slate-50 text-sm text-slate-600">
+        Checking your session…
+      </main>
+    )
+  }
+
+  if (user) return <Navigate to={destination} replace />
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
@@ -31,7 +49,7 @@ function LoginPage() {
     setSubmitting(true)
     try {
       await login(username, password)
-      navigate('/scan', { replace: true })
+      navigate(destination, { replace: true })
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) {
         setError('Incorrect username or password.')

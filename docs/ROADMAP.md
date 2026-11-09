@@ -202,3 +202,14 @@ WBS 6.0/9.0 (#23, UC-01): the frontend now has a standalone `/login` page and
 calls the session login endpoint. It keeps the returned CSRF token for later
 requests and redirects to New Scan after login. This slice does not yet protect
 dashboard routes or add logout; those stay in the follow-up authentication PR.
+
+### Dashboard session protection — November 9, 2026
+
+WBS 6.0/9.0 (#28, UC-01–UC-05): the frontend loads the current session user,
+protects dashboard routes, returns users to their requested page after login,
+and redirects signed-in users away from `/login`. The dashboard header shows
+the username and logs out; API 401 responses clear frontend auth state, and
+logout handles the empty 204 and clears the cached CSRF token. Backend scan
+authorization and per-user scan ownership remain open under "Restrict scans to
+authorized users and approved targets." The login/session checkbox stays open
+until this PR is merged.

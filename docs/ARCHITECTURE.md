@@ -96,9 +96,10 @@ Architecture and Interfaces phase (Sep 16–27).
 ## API Endpoints
 
 All under `/api/`, implemented in `backend/api/views.py`. Timestamps are ISO 8601
-UTC (`2026-11-02T01:00:00Z`). Login exists (see Authentication below), but the
-scan endpoints don't require it yet: every scan is visible to every caller
-until access control lands (WBS 9.0, next item).
+UTC (`2026-11-02T01:00:00Z`). The browser protects dashboard routes with the
+session login flow (see Authentication below). The scan endpoints still don't
+require a logged-in session or restrict scans by owner; backend access control
+is the remaining WBS 9.0 item.
 
 | Method + path | Returns |
 |---------------|---------|
@@ -130,6 +131,17 @@ accounts with `python manage.py createsuperuser` or the Django admin.
   with the `csrfToken` from the login response, or its next POST fails with 403.
 - Passwords are checked exactly as typed (no whitespace trimming); usernames
   are trimmed.
+- The frontend loads the session user once through `GET /api/auth/me/` before
+  rendering dashboard routes. Logged-out users go to `/login` and return to
+  their requested path after signing in. Logged-in users opening `/login` return
+  to the dashboard.
+- Dashboard navigation includes logout. A successful logout accepts the API's
+  empty 204 response and clears the cached CSRF token so the next POST fetches a
+  fresh one. A 401 from another API request clears frontend auth state and
+  redirects to `/login`.
+- These browser checks are a user-interface control only. Until backend
+  authorization is implemented, direct unauthenticated API requests can still
+  reach the scan endpoints and scan records remain visible to any API caller.
 
 ## API Error Format
 

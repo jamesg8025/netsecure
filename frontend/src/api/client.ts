@@ -15,6 +15,15 @@ export class ApiError extends Error {
 
 type ErrorBody = { error?: { code?: string; message?: string } }
 
+export const SESSION_EXPIRED_EVENT = 'netsecure:session-expired'
+
+function notifySessionExpired(path: string) {
+  // Login failures are shown inline on the login page. The /me endpoint is
+  // handled by getCurrentUser during the initial auth check.
+  if (path === '/auth/login/' || path === '/auth/me/') return
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT))
+}
+
 // Turn a failed response into an ApiError, using the backend's
 // {"error": {"code", "message"}} body when it has one.
 async function toApiError(response: Response, fallback: string): Promise<ApiError> {
@@ -35,6 +44,7 @@ export async function apiGet<T>(path: string, signal?: AbortSignal): Promise<T> 
     signal,
   })
   if (!response.ok) {
+    if (response.status === 401) notifySessionExpired(path)
     throw await toApiError(response, `GET /api${path} failed with ${response.status}`)
   }
   return (await response.json()) as T
@@ -60,8 +70,10 @@ export async function apiPost<T>(path: string, body: unknown, signal?: AbortSign
   })
   if (!response.ok) {
     if (response.status === 403) csrfToken = undefined
+    if (response.status === 401) notifySessionExpired(path)
     throw await toApiError(response, `POST /api${path} failed with ${response.status}`)
   }
+  if (response.status === 204) return undefined as T
   return (await response.json()) as T
 }
 
@@ -82,7 +94,22 @@ export async function login(username: string, password: string): Promise<LoginRe
   return response
 }
 
-// Forget the cached CSRF token. Used by tests, and by logout in the follow-up PR.
+export async function getCurrentUser(signal?: AbortSignal): Promise<AuthUser | null> {
+  try {
+    const { user } = await apiGet<{ user: AuthUser }>('/auth/me/', signal)
+    return user
+  } catch (error) {
+    if (error instanceof ApiError && error.status === 401) return null
+    throw error
+  }
+}
+
+export async function logout(): Promise<void> {
+  await apiPost<void>('/auth/logout/', {})
+  clearCsrfToken()
+}
+
+// Forget the cached CSRF token after logout, or reset it between tests.
 export function clearCsrfToken() {
   csrfToken = undefined
 }
