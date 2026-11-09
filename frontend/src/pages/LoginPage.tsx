@@ -22,6 +22,7 @@ function LoginPage() {
     if (!password) missingFields.push('password')
     if (missingFields.length > 0) {
       setError(`Enter your ${missingFields.join(' and ')}.`)
+      setInvalidFields(missingFields)
       return
     }
 
