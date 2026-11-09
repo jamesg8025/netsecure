@@ -175,3 +175,14 @@ WBS 6.0/8.0 (#16, UC-04): Findings loads the chosen scan's findings from
 completed scan to them. Severities map to labels, with an Info level. Nothing
 stores findings until the rule engine lands (WBS 7.0), so the empty state says
 an empty list doesn't mean the network is safe.
+
+### Login backend — November 8, 2026
+
+WBS 9.0 (UC-01): `POST /api/auth/login/`, `POST /api/auth/logout/`, and
+`GET /api/auth/me/` use Django session authentication. Sessions last 8 hours in
+an HTTP-only cookie; session and CSRF cookies are HTTPS-only when debug is off.
+Accounts come from `createsuperuser` or the admin. The login item stays
+unchecked until the frontend has a login page (WBS 6.0). The scan endpoints
+don't require login yet: that, and limiting each user to their own scans, is the
+next item ("Restrict scans to authorized users"). Repeated failed logins are
+not throttled yet.
