@@ -62,7 +62,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 
 ## Phase 6 — Authentication and Access Controls (WBS 9.0) · Oct 26–Nov 8
 
-- [ ] Implement login and session management — **James + Austin**
+- [x] Implement login and session management — **James + Austin**
 - [ ] Restrict scans to authorized users and approved targets — **James + Austin**
 
 ## Phase 7 — System Testing (WBS 10.0) · Nov 2–15
@@ -211,5 +211,13 @@ and redirects signed-in users away from `/login`. The dashboard header shows
 the username and logs out; API 401 responses clear frontend auth state, and
 logout handles the empty 204 and clears the cached CSRF token. Backend scan
 authorization and per-user scan ownership remain open under "Restrict scans to
-authorized users and approved targets." The login/session checkbox stays open
-until this PR is merged.
+authorized users and approved targets."
+
+### Login complete — November 9, 2026
+
+WBS 9.0 (UC-01): "Implement login and session management" is checked off. The
+backend login, logout, and current-user endpoints (#22), the login page (#27),
+and dashboard protection with logout (#29) are all merged. Still open:
+"Restrict scans to authorized users and approved targets". Until then the
+browser enforces login but the scan API doesn't, and every scan is visible to
+any caller. Repeated failed logins are not throttled yet.
