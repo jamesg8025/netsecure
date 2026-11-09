@@ -99,6 +99,7 @@ describe('FindingsPage (WBS 6.0/8.0)', () => {
     expect(await screen.findByText(/Showing scan #12 for 192\.168\.1\.0\/24/)).toBeInTheDocument()
     expect(fetchMock).toHaveBeenCalledWith('/api/scans/12/findings/', expect.anything())
     expect(screen.getByText('3 finding(s) found')).toBeInTheDocument()
+    expect(screen.getByText(/not confirmed vulnerabilities/)).toBeInTheDocument()
 
     const rows = screen.getAllByRole('row')
     expect(rows).toHaveLength(4)
@@ -144,6 +145,8 @@ describe('FindingsPage (WBS 6.0/8.0)', () => {
     )
     expect(screen.queryByPlaceholderText('Search findings...')).not.toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
+    expect(screen.getByText(/run a new scan to apply them/)).toBeInTheDocument()
+    expect(screen.queryByText(/don't generate findings yet/)).not.toBeInTheDocument()
   })
 
   it('shows the scan named by ?scan= instead of the newest one', async () => {
