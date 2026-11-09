@@ -33,6 +33,7 @@ function loginSuccess() {
 describe('LoginPage (WBS 6.0/9.0, UC-01)', () => {
   afterEach(() => {
     vi.unstubAllGlobals()
+    clearCsrfToken()
   })
 
   it.each([
