@@ -2,9 +2,12 @@ import { afterEach, describe, expect, it, vi } from 'vitest'
 import {
   ApiError,
   apiGet,
+  apiPost,
+  clearCsrfToken,
   listScanDevices,
   listScanFindings,
   listScans,
+  login,
   type ScanDevice,
   type ScanFinding,
   type ScanSummary,
@@ -34,6 +37,35 @@ describe('apiGet', () => {
 
     expect(error).toBeInstanceOf(ApiError)
     expect(error).toMatchObject({ status: 502, code: undefined, message: 'GET /api/scans/ failed with 502' })
+  })
+})
+
+describe('login', () => {
+  it('posts credentials and uses the rotated CSRF token on the next POST', async () => {
+    clearCsrfToken()
+    const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
+      if (input === '/api/csrf/') return Response.json({ csrfToken: 'csrf-before-login' })
+      if (input === '/api/auth/login/') {
+        expect(JSON.parse(String(init?.body))).toEqual({ username: 'izaiah', password: ' p a s s ' })
+        expect((init?.headers as Record<string, string>)['X-CSRFToken']).toBe('csrf-before-login')
+        return Response.json({
+          user: { id: 4, username: 'izaiah' },
+          csrfToken: 'csrf-after-login',
+        })
+      }
+      if (input === '/api/scans/') return Response.json({ ok: true })
+      return new Response(null, { status: 404 })
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(login('izaiah', ' p a s s ')).resolves.toEqual({
+      user: { id: 4, username: 'izaiah' },
+      csrfToken: 'csrf-after-login',
+    })
+    await apiPost('/scans/', {})
+
+    const nextPost = fetchMock.mock.calls.find(([url]) => url === '/api/scans/')
+    expect((nextPost?.[1]?.headers as Record<string, string>)['X-CSRFToken']).toBe('csrf-after-login')
   })
 })
 
