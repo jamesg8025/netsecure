@@ -72,6 +72,37 @@ The dev server forwards `/api/*` to the Django server at `127.0.0.1:8000`, so
 run the backend alongside it. The header shows **Backend: Connected** when
 it can reach `GET /api/health/`, and **Unreachable** when it can't.
 
+## Creating an Account and Logging In
+
+The dashboard requires a login, and there is no sign-up page: accounts are
+created on the backend. Accounts live in your local `db.sqlite3`, so each
+teammate creates their own.
+
+**Create an account (once).** In `backend/`, with the virtualenv active and
+`migrate` already run:
+
+```bash
+python manage.py createsuperuser  # prompts for username, email (optional), and password
+```
+
+The password must be at least 8 characters, not too common, not all numbers,
+and not too similar to the username.
+
+To add more accounts later, run `createsuperuser` again, or log in at
+<http://127.0.0.1:8000/admin/> with your superuser and use **Users → Add user**.
+Dashboard accounts don't need staff or superuser status.
+
+**Log in.** With both servers running (`runserver` and `npm run dev`):
+
+1. Open <http://localhost:5173>. If you're not logged in, you're sent to `/login`.
+2. Enter your username and password. A wrong username or password shows the
+   same "Incorrect username or password." message either way.
+3. After logging in, you land on the page you originally asked for. The header
+   shows your username and a **Log out** button.
+
+Your login is kept in a Django session cookie. If the session ends, or any API
+call returns 401, the dashboard sends you back to `/login`.
+
 ## Branch and PR Conventions
 
 - Branch format: `<area>/<short-description>`
