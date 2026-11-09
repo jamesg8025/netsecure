@@ -182,5 +182,16 @@ WBS 7.0, FR-05/FR-06: `backend/service-findings` implements five conservative
 service-review rules, atomic finding storage with scan results, and updated
 Findings guidance. See `SECURITY_RULES.md` for matches, severities, exclusions,
 and testing. The feature branch awaits team review/merge; the main-branch
-checkboxes remain unchanged until review. Authentication and approved-user
-access control remain separate WBS 9.0 work.
+checkboxes remain unchanged until review. The login screen and approved-user
+scan access control remain separate WBS 9.0 work.
+
+### Login backend — November 8, 2026
+
+WBS 9.0 (UC-01): `POST /api/auth/login/`, `POST /api/auth/logout/`, and
+`GET /api/auth/me/` use Django session authentication. Sessions last 8 hours in
+an HTTP-only cookie; session and CSRF cookies are HTTPS-only when debug is off.
+Accounts come from `createsuperuser` or the admin. The login item stays
+unchecked until the frontend has a login page (WBS 6.0). The scan endpoints
+don't require login yet: that, and limiting each user to their own scans, is the
+next item ("Restrict scans to authorized users"). Repeated failed logins are
+not throttled yet.

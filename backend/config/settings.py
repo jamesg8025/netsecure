@@ -126,6 +126,30 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 
+# Sessions and login (WBS 9.0, UC-01)
+# https://docs.djangoproject.com/en/6.1/topics/http/sessions/
+#
+# Login uses Django's session framework: the session ID lives in an HTTP-only
+# cookie that page scripts can't read. Sessions end after SESSION_COOKIE_AGE
+# seconds, or at logout.
+
+SESSION_COOKIE_AGE = 8 * 60 * 60  # 8 hours: one working session
+SESSION_COOKIE_HTTPONLY = True
+SESSION_COOKIE_SAMESITE = 'Lax'
+
+# Secure cookies are only sent over HTTPS. They default to on when DEBUG is
+# off; DJANGO_SECURE_COOKIES=0 turns them off for a non-debug server on plain
+# HTTP (such as a lab VM).
+_secure_cookies = os.environ.get('DJANGO_SECURE_COOKIES')
+SECURE_COOKIES = (
+    _secure_cookies.lower() in ('1', 'true', 'yes')
+    if _secure_cookies is not None
+    else not DEBUG
+)
+SESSION_COOKIE_SECURE = SECURE_COOKIES
+CSRF_COOKIE_SECURE = SECURE_COOKIES
+
+
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
 

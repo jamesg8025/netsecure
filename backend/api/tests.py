@@ -524,3 +524,33 @@ class ProjectConfigTests(SimpleTestCase):
         result = self._import_settings(DJANGO_SECRET_KEY='test-key')
 
         self.assertEqual(result.returncode, 0, result.stderr)
+
+    def _cookie_flags(self, **env):
+        """(SESSION_COOKIE_SECURE, CSRF_COOKIE_SECURE) for the given DJANGO_* vars."""
+        clean_env = {k: v for k, v in os.environ.items() if not k.startswith('DJANGO_')}
+        clean_env.update(env)
+        result = subprocess.run(
+            [sys.executable, '-c',
+             'import config.settings as s; print(s.SESSION_COOKIE_SECURE, s.CSRF_COOKIE_SECURE)'],
+            cwd=BACKEND_DIR, env=clean_env, capture_output=True, text=True,
+        )
+        self.assertEqual(result.returncode, 0, result.stderr)
+        return result.stdout.split()
+
+    def test_cookies_are_secure_when_debug_off(self):
+        self.assertEqual(self._cookie_flags(DJANGO_SECRET_KEY='test-key'), ['True', 'True'])
+
+    def test_cookies_are_not_secure_when_debug_on(self):
+        self.assertEqual(self._cookie_flags(DJANGO_DEBUG='1'), ['False', 'False'])
+
+    def test_secure_cookies_can_be_turned_off_without_debug(self):
+        flags = self._cookie_flags(DJANGO_SECRET_KEY='test-key', DJANGO_SECURE_COOKIES='0')
+
+        self.assertEqual(flags, ['False', 'False'])
+
+    def test_session_cookie_is_http_only_and_expires(self):
+        from django.conf import settings
+
+        self.assertTrue(settings.SESSION_COOKIE_HTTPONLY)
+        self.assertEqual(settings.SESSION_COOKIE_SAMESITE, 'Lax')
+        self.assertEqual(settings.SESSION_COOKIE_AGE, 8 * 60 * 60)

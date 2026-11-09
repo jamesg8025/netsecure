@@ -96,13 +96,17 @@ Architecture and Interfaces phase (Sep 16–27).
 ## API Endpoints
 
 All under `/api/`, implemented in `backend/api/views.py`. Timestamps are ISO 8601
-UTC (`2026-11-02T01:00:00Z`). Until login exists (WBS 9.0), every scan is
-visible to every caller; ownership checks come with auth.
+UTC (`2026-11-02T01:00:00Z`). Login exists (see Authentication below), but the
+scan endpoints don't require it yet: every scan is visible to every caller
+until access control lands (WBS 9.0, next item).
 
 | Method + path | Returns |
 |---------------|---------|
 | `GET /api/health/` | `{ status: "ok" }` |
 | `GET /api/csrf/` | `{ csrfToken }`, and sets the CSRF cookie POSTs need |
+| `POST /api/auth/login/` | Body `{ username, password }`. Starts a session. `{ user: { id, username }, csrfToken }`; 400 `validation_error` for a missing/blank field, 401 `invalid_credentials` |
+| `POST /api/auth/logout/` | Ends the session. 204, logged in or not |
+| `GET /api/auth/me/` | `{ user: { id, username } }`; 401 `not_authenticated` |
 | `POST /api/scans/` | Body `{ target, profile? }`. Runs the scan synchronously and saves it. `{ scan_id, target, profile, hosts }`; 400 invalid input, 502 scan failed (still saved as failed) |
 | `GET /api/scans/` | `{ scans: [{ scan_id, target, profile, timestamp, finished_at, status, error_message, devices_found, findings_found }] }`, newest first. `timestamp` is the start time; `status` is `Pending` / `In-Progress` / `Completed` / `Failed` |
 | `GET /api/scans/{id}/devices/` | `{ scan_id, devices: [{ host_id, ip_address, hostname, service_id, port, protocol, service, product, version }] }`, one row per open service; a host with none has one row with null service fields. 404 `scan_not_found` |
@@ -110,6 +114,22 @@ visible to every caller; ownership checks come with auth.
 
 The history/devices/findings rows match `database/history_results.sql`,
 `service_results.sql`, and `finding_results.sql` (via `api/scan_store.py`).
+
+## Authentication
+
+Login uses Django's session authentication (WBS 9.0, UC-01), implemented in
+`backend/api/auth_views.py`. There is no sign-up: an administrator creates
+accounts with `python manage.py createsuperuser` or the Django admin.
+
+- The session ID is in an HTTP-only, `SameSite=Lax` cookie that lasts 8 hours.
+  Session and CSRF cookies are HTTPS-only when `DJANGO_DEBUG` is off, unless
+  `DJANGO_SECURE_COOKIES=0` (plain-HTTP lab server).
+- Login and logout are CSRF-protected like every other POST: fetch
+  `/api/csrf/` first and send `X-CSRFToken`.
+- **Login rotates the CSRF token.** The frontend must replace its cached token
+  with the `csrfToken` from the login response, or its next POST fails with 403.
+- Passwords are checked exactly as typed (no whitespace trimming); usernames
+  are trimmed.
 
 ## API Error Format
 
@@ -130,6 +150,8 @@ cause (bad input, unknown URL, wrong method, CSRF failure, server error):
 | 400 | `validation_error` | A field is missing, the wrong type, blank, or too long |
 | 400 | `invalid_target` | Scanner validator rejected the target (FR-02) — available once the scanner is integrated |
 | 400 | `bad_request` | Other malformed request |
+| 401 | `invalid_credentials` | Login with a wrong username or password, or an inactive account (one message for all) |
+| 401 | `not_authenticated` | `GET /api/auth/me/` without a logged-in session |
 | 403 | `forbidden` | Permission denied or CSRF check failed |
 | 404 | `not_found` | Unknown URL or missing resource |
 | 405 | `method_not_allowed` | Wrong HTTP method (`Allow` header lists valid ones) |
