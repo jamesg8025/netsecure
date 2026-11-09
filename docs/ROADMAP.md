@@ -49,10 +49,10 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 
 ## Phase 4 — Security Findings (WBS 7.0) · Oct 12–Nov 1
 
-- [ ] Define rule set mapping ports/services to warnings — **Austin + Zach**
-- [ ] Implement warning text and severity levels (FR-05, FR-06) — **Austin + Zach**
-- [ ] Storage integration for findings — **Matt**
-- [ ] Display integration for findings — **Izaiah**
+- [x] Define rule set mapping ports/services to warnings — **Austin + Zach**
+- [x] Implement warning text and severity levels (FR-05, FR-06) — **Austin + Zach**
+- [x] Storage integration for findings — **Matt**
+- [x] Display integration for findings — **Izaiah**
 
 ## Phase 5 — Component Integration (WBS 8.0) · Oct 19–Nov 8
 
