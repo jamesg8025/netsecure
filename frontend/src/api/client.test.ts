@@ -41,6 +41,7 @@ describe('apiGet', () => {
 
 describe('login', () => {
   it('posts credentials and uses the rotated CSRF token on the next POST', async () => {
+    clearCsrfToken()
     const fetchMock = vi.fn<typeof fetch>(async (input, init) => {
       if (input === '/api/csrf/') return Response.json({ csrfToken: 'csrf-before-login' })
       if (input === '/api/auth/login/') {
