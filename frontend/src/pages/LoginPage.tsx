@@ -35,6 +35,11 @@ function LoginPage() {
     } catch (cause: unknown) {
       if (cause instanceof ApiError && cause.status === 401) {
         setError('Incorrect username or password.')
+        setInvalidFields(['username', 'password'])
+      } else if (cause instanceof ApiError && cause.status === 403) {
+        // A stale CSRF token (e.g. after logging in or out in another tab).
+        // apiPost has already dropped it, so the next attempt gets a fresh one.
+        setError('Your session changed. Please try again.')
       } else if (cause instanceof ApiError && cause.status < 500) {
         setError(cause.message)
       } else {
