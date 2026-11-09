@@ -41,7 +41,7 @@ def evaluate_service(*, port, protocol, service_name):
             'access to trusted administrators. Encryption and login policy were not tested.',
         )
     elif name == 'ftp' and port != 990:
-        warning = Warning(
+        warning = RuleMatch(
             'FTP-001', 'medium', 'Review FTP transport and access',
             observation + 'Verify encrypted transfer and authentication, or use SFTP. '
             'Anonymous access, TLS negotiation, and file permissions were not tested.',
