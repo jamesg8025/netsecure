@@ -40,6 +40,13 @@ describe('dashboard routes', () => {
     }
   })
 
+  it('renders the login page outside the dashboard layout', () => {
+    renderAt('/login')
+
+    expect(screen.getByRole('heading', { name: 'Log in' })).toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Main' })).not.toBeInTheDocument()
+  })
+
   it('navigates between pages and marks the current link', async () => {
     const user = userEvent.setup()
     renderAt('/scan')

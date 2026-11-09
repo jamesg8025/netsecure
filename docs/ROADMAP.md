@@ -195,3 +195,10 @@ unchecked until the frontend has a login page (WBS 6.0). The scan endpoints
 don't require login yet: that, and limiting each user to their own scans, is the
 next item ("Restrict scans to authorized users"). Repeated failed logins are
 not throttled yet.
+
+### Login page — November 8, 2026
+
+WBS 6.0/9.0 (#23, UC-01): the frontend now has a standalone `/login` page and
+calls the session login endpoint. It keeps the returned CSRF token for later
+requests and redirects to New Scan after login. This slice does not yet protect
+dashboard routes or add logout; those stay in the follow-up authentication PR.

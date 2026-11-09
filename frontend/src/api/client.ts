@@ -65,6 +65,23 @@ export async function apiPost<T>(path: string, body: unknown, signal?: AbortSign
   return (await response.json()) as T
 }
 
+export type AuthUser = {
+  id: number
+  username: string
+}
+
+export type LoginResponse = {
+  user: AuthUser
+  csrfToken: string
+}
+
+export async function login(username: string, password: string): Promise<LoginResponse> {
+  const response = await apiPost<LoginResponse>('/auth/login/', { username, password })
+  // Django rotates the CSRF token after a successful login.
+  csrfToken = response.csrfToken
+  return response
+}
+
 export type HealthResponse = { status: 'ok' }
 
 export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
