@@ -82,6 +82,11 @@ export async function login(username: string, password: string): Promise<LoginRe
   return response
 }
 
+// Forget the cached CSRF token. Used by tests, and by logout in the follow-up PR.
+export function clearCsrfToken() {
+  csrfToken = undefined
+}
+
 export type HealthResponse = { status: 'ok' }
 
 export function getHealth(signal?: AbortSignal): Promise<HealthResponse> {
