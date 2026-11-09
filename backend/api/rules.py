@@ -47,7 +47,7 @@ def evaluate_service(*, port, protocol, service_name):
             'Anonymous access, TLS negotiation, and file permissions were not tested.',
         )
     elif name in {'jetdirect', 'pdl-datastream'} and port == 9100:
-        warning = Warning(
+        warning = RuleMatch(
             'PRINT-001', 'medium', 'Restrict raw printing access',
             observation + 'Restrict this printing endpoint to approved clients to reduce unwanted job '
             'submission. Device identity, authentication, and printing behavior were not tested.',
