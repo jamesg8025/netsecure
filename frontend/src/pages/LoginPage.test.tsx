@@ -3,6 +3,7 @@ import userEvent from '@testing-library/user-event'
 import { createMemoryRouter } from 'react-router'
 import { RouterProvider } from 'react-router/dom'
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { clearCsrfToken } from '../api/client'
 import { routes } from '../routes'
 
 function mockBackend(reply: Response | Promise<Response>) {
