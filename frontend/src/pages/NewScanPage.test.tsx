@@ -1,6 +1,6 @@
-import { render, screen } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
-import { afterEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import NewScanPage from './NewScanPage'
 
 type ScanReply = { status: number; body: unknown }
@@ -72,13 +72,73 @@ describe('NewScanPage', () => {
 
     await submit('192.168.1.1')
 
-    expect(await screen.findByRole('button', { name: 'Scanning…' })).toBeDisabled()
-    expect(screen.getByRole('status')).toHaveTextContent('Scanning 192.168.1.1')
+    const button = await screen.findByRole('button', { name: 'Scanning…' })
+    expect(button).toBeDisabled()
+    expect(within(button).getByTestId('spinner')).toBeInTheDocument()
+    expect(screen.getByRole('status')).toHaveTextContent('Scanning 192.168.1.1… This can take a few minutes.')
+    expect(screen.getByTestId('scan-progress-bar')).toHaveAttribute('aria-hidden', 'true')
 
     finish({ status: 200, body: { target: '192.168.1.1', profile: 'basic', hosts: [] } })
 
     expect(await screen.findByText(/0 active hosts found/)).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Start Scan' })).toBeEnabled()
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('scan-progress')).not.toBeInTheDocument()
+  })
+
+  describe('elapsed timer', () => {
+    beforeEach(() => {
+      vi.useFakeTimers({ shouldAdvanceTime: true })
+    })
+
+    afterEach(() => {
+      vi.useRealTimers()
+    })
+
+    it('counts up while scanning, outside the status region, and resets for the next scan', async () => {
+      let finish!: (reply: ScanReply) => void
+      const fetchMock = mockBackend(new Promise((resolve) => { finish = resolve }))
+      const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime })
+      render(<NewScanPage />)
+      await user.type(screen.getByLabelText(/Target/), '192.168.1.1')
+      await user.click(screen.getByRole('button', { name: 'Start Scan' }))
+
+      const elapsed = await screen.findByTestId('scan-elapsed')
+      expect(elapsed).toHaveTextContent('Elapsed time 0:00')
+      expect(screen.getByRole('status')).not.toContainElement(elapsed)
+
+      act(() => { vi.advanceTimersByTime(5000) })
+      expect(elapsed).toHaveTextContent('0:05')
+
+      act(() => { vi.advanceTimersByTime(60_000) })
+      expect(elapsed).toHaveTextContent('1:05')
+
+      finish({ status: 200, body: { target: '192.168.1.1', profile: 'basic', hosts: [] } })
+      expect(await screen.findByText(/0 active hosts found/)).toBeInTheDocument()
+      expect(screen.queryByTestId('scan-elapsed')).not.toBeInTheDocument()
+
+      // A second scan starts the timer from zero again.
+      fetchMock.mockImplementation(async (url: string) => {
+        if (url === '/api/csrf/') return Response.json({ csrfToken: 'token-123' })
+        return new Promise<Response>(() => {})
+      })
+      await user.click(screen.getByRole('button', { name: 'Start Scan' }))
+      expect(await screen.findByTestId('scan-elapsed')).toHaveTextContent('0:00')
+    })
+  })
+
+  it('removes the progress indicator when the scan fails', async () => {
+    mockBackend({
+      status: 500,
+      body: { error: { code: 'scan_failed', message: 'Nmap is not installed.' } },
+    })
+
+    await submit('192.168.1.1')
+
+    expect(await screen.findByRole('alert')).toHaveTextContent('Nmap is not installed.')
+    expect(screen.queryByTestId('scan-progress')).not.toBeInTheDocument()
+    expect(screen.queryByTestId('spinner')).not.toBeInTheDocument()
+    expect(screen.queryByRole('status')).not.toBeInTheDocument()
   })
 
   it("shows the backend's error message when the target is rejected", async () => {
