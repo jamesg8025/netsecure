@@ -45,7 +45,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 - [x] Device list view — **Izaiah**
 - [x] Security findings / warnings view with severity indicators — **Izaiah**
 - [x] Scan history view — **Izaiah**
-- [ ] Scan-in-progress indicator (NFR-02) — **Izaiah**
+- [x] Scan-in-progress indicator (NFR-02) — **Izaiah**
 
 ## Phase 4 — Security Findings (WBS 7.0) · Oct 12–Nov 1
 
@@ -221,3 +221,14 @@ and dashboard protection with logout (#29) are all merged. Still open:
 "Restrict scans to authorized users and approved targets". Until then the
 browser enforces login but the scan API doesn't, and every scan is visible to
 any caller. Repeated failed logins are not throttled yet.
+
+### Scan-in-progress indicator — November 11, 2026
+
+WBS 6.0 (#32, NFR-02, UC-02): while a scan runs, the Start Scan button shows a
+spinner and New Scan shows a status card with the target, an elapsed timer,
+and an indeterminate progress bar, so the page doesn't look frozen. A shared
+`Spinner` component is available for other loading states. The timer isn't
+announced on every tick, and with reduced motion the spinner stops and the bar
+is hidden. The bar can't show a real percentage because scans are still
+synchronous; that waits on "Scan control: initiate, track status, return
+results" (WBS 4.0).

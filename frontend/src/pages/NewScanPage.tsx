@@ -1,23 +1,45 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import PageHeader from '../components/PageHeader'
+import Spinner from '../components/Spinner'
 import { startScan, type ScanResponse } from '../api/client'
 
+// Formats whole seconds as m:ss (e.g. 65 -> "1:05").
+function formatElapsed(seconds: number) {
+  const m = Math.floor(seconds / 60)
+  const s = seconds % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
 
 function NewScanPage() {
   const [target, setTarget] = useState('')
+  const [scanTarget, setScanTarget] = useState('')
   const [status, setStatus] = useState('')
   const [error, setError] = useState('')
   const [scanning, setScanning] = useState(false)
+  const [elapsed, setElapsed] = useState(0)
   const [result, setResult] = useState<ScanResponse | null>(null)
+
+  // Scans are synchronous and report no progress, so count up the time since
+  // the scan started to show the page hasn't frozen (NFR-02).
+  useEffect(() => {
+    if (!scanning) return
+    const start = Date.now()
+    const id = setInterval(() => {
+      setElapsed(Math.floor((Date.now() - start) / 1000))
+    }, 1000)
+    return () => clearInterval(id)
+  }, [scanning])
 
   async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault()
     if (scanning) return
 
     setScanning(true)
+    setScanTarget(target)
+    setElapsed(0)
     setError('')
     setResult(null)
-    setStatus(`Scanning ${target}… this can take a few minutes.`)
+    setStatus('')
     try {
       const scan = await startScan(target)
       setResult(scan)
@@ -70,13 +92,42 @@ function NewScanPage() {
           <button 
           type="submit" 
           disabled={scanning}
-          className="cursor-pointer rounded-md bg-slate-900 px-5 py-2 text-white transition enabled:hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
+          className="inline-flex cursor-pointer items-center gap-2 rounded-md bg-slate-900 px-5 py-2 text-white transition enabled:hover:bg-slate-800 active:scale-[0.97] disabled:cursor-wait disabled:opacity-70"
            >
+            {scanning && <Spinner className="size-4 text-white" />}
             {scanning ? 'Scanning…' : 'Start Scan'}
           </button>
         </form>
 
-        {status && ( 
+        {scanning && (
+          <div
+            data-testid="scan-progress"
+            className="mt-5 rounded-md border border-blue-200 bg-blue-50 p-4 text-sm text-blue-900"
+          >
+            <div className="flex items-start gap-3">
+              <Spinner className="mt-0.5 size-4 text-blue-600" />
+              <p role="status" className="flex-1">
+                Scanning <strong>{scanTarget}</strong>…{' '}
+                <span className="block text-blue-700">This can take a few minutes.</span>
+              </p>
+              {/* Outside the status region so screen readers don't announce every tick. */}
+              <span data-testid="scan-elapsed" className="tabular-nums text-blue-700">
+                <span className="sr-only">Elapsed time </span>
+                {formatElapsed(elapsed)}
+              </span>
+            </div>
+            {/* Decorative; hidden under reduced motion, where the timer shows progress instead. */}
+            <div
+              aria-hidden="true"
+              data-testid="scan-progress-bar"
+              className="relative mt-3 h-1 overflow-hidden rounded-full bg-blue-100 motion-reduce:hidden"
+            >
+              <div className="absolute inset-y-0 left-0 w-1/4 rounded-full bg-blue-500 motion-safe:animate-indeterminate" />
+            </div>
+          </div>
+        )}
+
+        {status && (
           <p role="status" className="mt-5 rounded-md border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">
             {status}
           </p>

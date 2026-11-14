@@ -1,1 +1,16 @@
 @import "tailwindcss";
+
+@theme {
+  /* Indeterminate progress bar: a segment slides across its track on a loop.
+     Used as `animate-indeterminate` on an element 1/4 of the track's width. */
+  --animate-indeterminate: indeterminate 1.5s ease-in-out infinite;
+
+  @keyframes indeterminate {
+    0% {
+      transform: translateX(-100%);
+    }
+    100% {
+      transform: translateX(400%);
+    }
+  }
+}
