@@ -15,6 +15,7 @@ from django.http import HttpResponse, JsonResponse
 from django.middleware.csrf import get_token
 from django.views.decorators.http import require_GET, require_POST
 
+from . import login_throttle
 from .errors import ApiError
 from .validation import parse_json_body, require_string
 
@@ -39,16 +40,22 @@ def login(request):
     200 {user, csrfToken}; 400 validation_error if a field is missing or
     blank; 401 invalid_credentials if the username or password is wrong or
     the account is inactive (one message for all, so the response doesn't
-    reveal which usernames exist).
+    reveal which usernames exist); 429 too_many_login_attempts, with
+    Retry-After, after repeated failures (see login_throttle).
     """
     data = parse_json_body(request)
     username = require_string(data, 'username', max_length=MAX_USERNAME_LENGTH)
     password = _require_password(data)
 
+    # Checked before the password, so a locked-out attempt is refused even
+    # when it's right and never reaches the password hasher.
+    login_throttle.check(request, username)
     user = authenticate(request, username=username, password=password)
     if user is None:
+        login_throttle.record_failure(request, username)
         raise ApiError(401, 'invalid_credentials', 'Incorrect username or password.')
 
+    login_throttle.record_success(request, username)
     auth_login(request, user)
     return JsonResponse({'user': user_payload(user), 'csrfToken': get_token(request)})
 
