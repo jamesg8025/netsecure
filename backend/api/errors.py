@@ -40,15 +40,17 @@ _BODY_HEADERS = {'content-type', 'content-length'}
 class ApiError(Exception):
     """Raise from a view to return a JSON error response."""
 
-    def __init__(self, status, code, message, details=None):
+    def __init__(self, status, code, message, details=None, headers=None):
         super().__init__(message)
         self.status = status
         self.code = code
         self.message = message
         self.details = details
+        # Extra response headers, such as Retry-After on a 429.
+        self.headers = headers
 
 
-def error_response(status, code=None, message=None, details=None):
+def error_response(status, code=None, message=None, details=None, headers=None):
     """Build a JSON error response in the standard API shape."""
     phrase = HTTPStatus(status).phrase
     error = {
@@ -57,7 +59,7 @@ def error_response(status, code=None, message=None, details=None):
     }
     if details is not None:
         error['details'] = details
-    return JsonResponse({'error': error}, status=status)
+    return JsonResponse({'error': error}, status=status, headers=headers)
 
 
 class ApiErrorMiddleware:
@@ -85,7 +87,11 @@ class ApiErrorMiddleware:
             return None
         if isinstance(exception, ApiError):
             return error_response(
-                exception.status, exception.code, exception.message, exception.details
+                exception.status,
+                exception.code,
+                exception.message,
+                exception.details,
+                exception.headers,
             )
         if isinstance(exception, Http404):
             return error_response(404)
