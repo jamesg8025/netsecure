@@ -28,6 +28,7 @@ def csrf(request):
 @require_http_methods(['GET', 'POST'])
 def scans(request):
     """GET lists saved scans (history); POST runs a new scan."""
+    _require_user(request)
     if request.method == 'GET':
         return _list_scans(request)
     return _start_scan(request)
@@ -38,10 +39,10 @@ def _list_scans(request):
     Scan history, newest first (UC-05).
 
     Each scan has its target, profile, status, start/finish times, error
-    message (failed scans), and device and finding counts. Every scan is listed
-    until login exists (WBS 9.0); then this must pass request.user.
+    message (failed scans), and device and finding counts. Only the signed-in
+    user's scans are included.
     """
-    return JsonResponse({'scans': scan_store.scan_history()})
+    return JsonResponse({'scans': scan_store.scan_history(user=request.user)})
 
 
 def _start_scan(request):
@@ -70,8 +71,7 @@ def _start_scan(request):
             {'field': 'profile'},
         )
 
-    # No owner until login exists (WBS 9.0).
-    scan = scan_store.create_scan(target, profile)
+    scan = scan_store.create_scan(target, profile, user=request.user)
     scan_store.start_scan(scan)
     try:
         hosts = scan_target(target, profile=profile)
@@ -91,9 +91,15 @@ def _start_scan(request):
     return JsonResponse({'scan_id': scan.scan_id, 'target': target, 'profile': profile, 'hosts': hosts})
 
 
-def _require_scan(scan_id):
-    """404 for a scan that doesn't exist. Ownership checks come with login (WBS 9.0)."""
-    if not Scan.objects.filter(pk=scan_id).exists():
+def _require_user(request):
+    if not request.user.is_authenticated:
+        raise ApiError(401, 'not_authenticated', 'You are not logged in.')
+
+
+def _require_scan(request, scan_id):
+    """Hide missing, unowned and other users' scans behind the same 404."""
+    _require_user(request)
+    if not Scan.objects.filter(pk=scan_id, user=request.user).exists():
         raise ApiError(404, 'scan_not_found', 'Scan not found.')
 
 
@@ -103,12 +109,12 @@ def scan_devices(request, scan_id):
     Devices found by one scan (UC-03): one row per open service, plus one row
     for each host with no open services (all service fields null).
     """
-    _require_scan(scan_id)
+    _require_scan(request, scan_id)
     return JsonResponse({'scan_id': scan_id, 'devices': scan_store.scan_devices(scan_id)})
 
 
 @require_GET
 def scan_findings(request, scan_id):
     """Security findings for one scan, most severe first (UC-04, FR-05, FR-06)."""
-    _require_scan(scan_id)
+    _require_scan(request, scan_id)
     return JsonResponse({'scan_id': scan_id, 'findings': scan_store.scan_findings(scan_id)})

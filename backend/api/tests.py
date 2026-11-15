@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.core.exceptions import PermissionDenied
 from django.core.management import call_command
 from django.http import Http404, HttpResponse
@@ -333,6 +334,7 @@ class CsrfEndpointTests(TestCase):
 
     def test_token_allows_post_with_csrf_enforced(self):
         client = Client(enforce_csrf_checks=True)
+        client.force_login(get_user_model().objects.create_user(username='csrf-user'))
         token = client.get(reverse('api:csrf')).json()['csrfToken']
 
         with mock.patch('api.views.scan_target', return_value=[]):
@@ -345,6 +347,10 @@ class CsrfEndpointTests(TestCase):
 
 
 class ScanEndpointTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     HOSTS = [{
         'ip': '192.168.1.1',
         'hostname': 'router',
@@ -426,7 +432,7 @@ class ScanEndpointTests(TestCase):
         self._post({'target': '192.168.1.1'})
 
         scan = Scan.objects.get()
-        self.assertEqual((scan.target, scan.profile, scan.status, scan.user), ('192.168.1.1', 'basic', 'completed', None))
+        self.assertEqual((scan.target, scan.profile, scan.status, scan.user), ('192.168.1.1', 'basic', 'completed', self.user))
         self.assertEqual(Host.objects.get(scan=scan).hostname, 'router')
         service = Service.objects.get()
         self.assertEqual((service.port, service.service_name, service.product), (80, 'http', None))
@@ -478,6 +484,10 @@ class ScanEndpointTests(TestCase):
 
 class ScanEndpointTransactionTests(TransactionTestCase):
     """TestCase wraps every test in a transaction, so this check needs TransactionTestCase."""
+
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
 
     def test_nmap_runs_outside_a_database_transaction(self):
         def fake_scan(target, profile):
