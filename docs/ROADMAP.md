@@ -63,7 +63,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 ## Phase 6 — Authentication and Access Controls (WBS 9.0) · Oct 26–Nov 8
 
 - [x] Implement login and session management — **James + Austin**
-- [ ] Restrict scans to authorized users and approved targets — **James + Austin**
+- [ ] Restrict scans to authorized users and approved targets — **James + Austin** (session/ownership implementation on `backend/scan-authorization`; organization-specific target approval policy still open)
 
 ## Phase 7 — System Testing (WBS 10.0) · Nov 2–15
 

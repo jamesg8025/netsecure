@@ -187,6 +187,13 @@ scans are not backfilled; a new scan applies the rules.
 
 ## Deployment Environment
 
+### Scan authorization branch
+
+`backend/scan-authorization` gates scan creation/history/detail APIs on a Django
+session, assigns new scans to the session user, and restricts results to their
+owner. Missing and inaccessible scans share the same 404. Existing ownerless
+results are retained but hidden. See `SCAN_AUTHORIZATION.md` before deployment.
+
 - **Runtime:** Ubuntu Linux VM (VirtualBox) — NFR-06
 - **Database:** SQLite file in `database/` — no external DB server
 - **Scanner:** Nmap installed on the host; invoked via subprocess
