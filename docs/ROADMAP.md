@@ -232,3 +232,14 @@ announced on every tick, and with reduced motion the spinner stops and the bar
 is hidden. The bar can't show a real percentage because scans are still
 synchronous; that waits on "Scan control: initiate, track status, return
 results" (WBS 4.0).
+
+### Login throttling — November 15, 2026
+
+WBS 9.0 (UC-01): repeated failed logins are now throttled. Five failures for
+one username from one IP, or 20 from one IP across all usernames, within 15
+minutes lock out further logins until that window ends: `POST /api/auth/login/`
+returns 429 `too_many_login_attempts` with `Retry-After`, and the login page
+shows the message. Counts are in Django's in-memory cache (per server process,
+cleared on restart). See Authentication in `ARCHITECTURE.md`. "Restrict scans
+to authorized users and approved targets" stays unchecked: the approved-target
+policy is still open.

@@ -103,6 +103,10 @@ Dashboard accounts don't need staff or superuser status.
 Your login is kept in a Django session cookie. If the session ends, or any API
 call returns 401, the dashboard sends you back to `/login`.
 
+After 5 wrong passwords for one username (or 20 from your machine) within 15
+minutes, login is blocked for the rest of that window, even with the right
+password. In development, restarting `runserver` clears the block.
+
 ## Branch and PR Conventions
 
 - Branch format: `<area>/<short-description>`
