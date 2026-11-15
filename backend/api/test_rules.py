@@ -1,6 +1,7 @@
 """Rule accuracy and scan -> persistence -> API integration."""
 from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.test import SimpleTestCase, TestCase
 from django.urls import reverse
 
@@ -56,6 +57,10 @@ HOSTS = [{'ip': '192.168.56.20', 'hostname': '', 'services': [
 
 
 class FindingsIntegrationTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     def post_scan(self, hosts=HOSTS):
         with mock.patch('api.views.scan_target', return_value=hosts):
             return self.client.post(reverse('api:scans'),

@@ -1,6 +1,7 @@
 """Tests for the read endpoints (WBS 4.0/8.0)."""
 from unittest import mock
 
+from django.contrib.auth import get_user_model
 from django.test import TestCase
 from django.urls import reverse
 
@@ -21,7 +22,7 @@ HOSTS = [
 
 
 def completed_scan(hosts=HOSTS, target='192.168.1.0/24'):
-    scan = scan_store.create_scan(target)
+    scan = scan_store.create_scan(target, user=get_user_model().objects.get(username='scan-reader'))
     scan_store.start_scan(scan)
     scan_store.save_results(scan, hosts)
     # These read-endpoint tests seed their own exact finding sets.
@@ -31,6 +32,10 @@ def completed_scan(hosts=HOSTS, target='192.168.1.0/24'):
 
 
 class ScanHistoryEndpointTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     def test_empty_history(self):
         response = self.client.get(reverse('api:scans'))
 
@@ -40,7 +45,7 @@ class ScanHistoryEndpointTests(TestCase):
     def test_lists_scans_newest_first_with_counts(self):
         first = completed_scan()
         Finding.objects.create(service=Service.objects.get(port=23), severity='high', description='Telnet.')
-        failed = scan_store.create_scan('192.168.2.1')
+        failed = scan_store.create_scan('192.168.2.1', user=self.user)
         scan_store.fail_scan(failed, 'Nmap was not found.')
 
         scans = self.client.get(reverse('api:scans')).json()['scans']
@@ -74,6 +79,10 @@ class ScanHistoryEndpointTests(TestCase):
 
 
 class ScanDevicesEndpointTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     def test_lists_devices_one_row_per_service(self):
         scan = completed_scan()
 
@@ -106,6 +115,10 @@ class ScanDevicesEndpointTests(TestCase):
 
 
 class ScanFindingsEndpointTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     def test_lists_findings_most_severe_first(self):
         scan = completed_scan()
         Finding.objects.create(service=Service.objects.get(port=80), severity='low', description='Banner.')
@@ -130,6 +143,10 @@ class ScanFindingsEndpointTests(TestCase):
 
 
 class ScanDetailRouteTests(TestCase):
+    def setUp(self):
+        self.user = get_user_model().objects.create_user(username='scan-reader')
+        self.client.force_login(self.user)
+
     def test_urls(self):
         self.assertEqual(reverse('api:scan-devices', args=[7]), '/api/scans/7/devices/')
         self.assertEqual(reverse('api:scan-findings', args=[7]), '/api/scans/7/findings/')
