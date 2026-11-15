@@ -139,9 +139,18 @@ accounts with `python manage.py createsuperuser` or the Django admin.
   empty 204 response and clears the cached CSRF token so the next POST fetches a
   fresh one. A 401 from another API request clears frontend auth state and
   redirects to `/login`.
-- These browser checks are a user-interface control only. Until backend
-  authorization is implemented, direct unauthenticated API requests can still
-  reach the scan endpoints and scan records remain visible to any API caller.
+- The browser checks are for the user interface only; the backend enforces
+  access on its own.
+
+### Scan authorization
+
+Every scan endpoint (`POST`/`GET /api/scans/` and the per-scan devices and
+findings) requires a session and returns 401 without one. New scans belong to
+the user who started them, and users only see their own scans. Ownership is
+enforced in `scan_store`: the history, devices and findings queries require the
+user and filter by owner. A missing scan and another user's scan return the
+same 404. Older scans with no owner are kept in the database but hidden. See
+`SCAN_AUTHORIZATION.md` before deploying.
 
 ## API Error Format
 
@@ -186,13 +195,6 @@ See `SECURITY_RULES.md` for rules, severities and detection limits. Older saved
 scans are not backfilled; a new scan applies the rules.
 
 ## Deployment Environment
-
-### Scan authorization branch
-
-`backend/scan-authorization` gates scan creation/history/detail APIs on a Django
-session, assigns new scans to the session user, and restricts results to their
-owner. Missing and inaccessible scans share the same 404. Existing ownerless
-results are retained but hidden. See `SCAN_AUTHORIZATION.md` before deployment.
 
 - **Runtime:** Ubuntu Linux VM (VirtualBox) — NFR-06
 - **Database:** SQLite file in `database/` — no external DB server
