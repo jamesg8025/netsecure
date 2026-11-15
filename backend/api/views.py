@@ -7,7 +7,6 @@ from scanner.scanner import SCAN_PROFILES, ScanError, scan_target
 
 from . import scan_store
 from .errors import ApiError
-from .models import Scan
 from .targets import MAX_TARGET_LENGTH, validate_scan_target
 from .validation import parse_json_body, require_string
 
@@ -96,11 +95,13 @@ def _require_user(request):
         raise ApiError(401, 'not_authenticated', 'You are not logged in.')
 
 
-def _require_scan(request, scan_id):
-    """Hide missing, unowned and other users' scans behind the same 404."""
+def _owned_scan_rows(request, query, scan_id):
+    """Run a per-scan query for the signed-in user; missing and other users' scans share one 404."""
     _require_user(request)
-    if not Scan.objects.filter(pk=scan_id, user=request.user).exists():
-        raise ApiError(404, 'scan_not_found', 'Scan not found.')
+    try:
+        return query(scan_id, request.user)
+    except scan_store.ScanNotFound:
+        raise ApiError(404, 'scan_not_found', 'Scan not found.') from None
 
 
 @require_GET
@@ -109,12 +110,12 @@ def scan_devices(request, scan_id):
     Devices found by one scan (UC-03): one row per open service, plus one row
     for each host with no open services (all service fields null).
     """
-    _require_scan(request, scan_id)
-    return JsonResponse({'scan_id': scan_id, 'devices': scan_store.scan_devices(scan_id)})
+    devices = _owned_scan_rows(request, scan_store.scan_devices, scan_id)
+    return JsonResponse({'scan_id': scan_id, 'devices': devices})
 
 
 @require_GET
 def scan_findings(request, scan_id):
     """Security findings for one scan, most severe first (UC-04, FR-05, FR-06)."""
-    _require_scan(request, scan_id)
-    return JsonResponse({'scan_id': scan_id, 'findings': scan_store.scan_findings(scan_id)})
+    findings = _owned_scan_rows(request, scan_store.scan_findings, scan_id)
+    return JsonResponse({'scan_id': scan_id, 'findings': findings})

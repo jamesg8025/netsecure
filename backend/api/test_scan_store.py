@@ -7,7 +7,7 @@ from django.test import TestCase
 
 from . import scan_store
 from .models import Finding, Host, Scan, Service
-from .scan_store import ScanStateError
+from .scan_store import ScanNotFound, ScanStateError
 
 DATABASE_DIR = Path(__file__).resolve().parents[2] / 'database'
 
@@ -179,14 +179,16 @@ class QueryTests(TestCase):
                          [('Failed', 0, 0), ('Completed', 2, 3)])
         self.assertEqual(rows[0]['error_message'], 'Nmap was not found.')
 
-    def test_history_without_user_lists_owner_less_scans(self):
-        scan_store.create_scan('192.168.3.1')
+    def test_history_lists_only_the_users_scans(self):
+        other = get_user_model().objects.create_user('other-owner')
+        scan_store.create_scan('192.168.3.1', user=other)
+        scan_store.create_scan('192.168.3.2')
 
-        self.assertEqual(len(scan_store.scan_history()), 3)
         self.assertEqual(len(scan_store.scan_history(self.user)), 2)
+        self.assertEqual([r['target'] for r in scan_store.scan_history(other)], ['192.168.3.1'])
 
     def test_devices_match_sql(self):
-        rows = scan_store.scan_devices(self.scan.pk)
+        rows = scan_store.scan_devices(self.scan.pk, self.user)
 
         self.assertMatchesSql(rows, self.sql_rows('service_results.sql', {'scan_id': self.scan.pk}))
         self.assertEqual([(r['ip_address'], r['port'], r['protocol']) for r in rows], [
@@ -195,12 +197,34 @@ class QueryTests(TestCase):
         ])
 
     def test_findings_match_sql(self):
-        rows = scan_store.scan_findings(self.scan.pk)
+        rows = scan_store.scan_findings(self.scan.pk, self.user)
 
         self.assertMatchesSql(rows, self.sql_rows('finding_results.sql', {'scan_id': self.scan.pk}))
         self.assertEqual([(r['severity'], r['finding']) for r in rows], [
             ('high', 'Unencrypted web admin'), ('medium', 'Untitled finding'), ('low', 'Untitled finding'),
         ])
 
-    def test_unknown_scan_has_no_rows(self):
-        self.assertEqual((scan_store.scan_devices(999), scan_store.scan_findings(999)), ([], []))
+    def test_unknown_scan_is_not_found(self):
+        for query in (scan_store.scan_devices, scan_store.scan_findings):
+            with self.assertRaises(ScanNotFound):
+                query(999, self.user)
+
+    def test_other_users_scan_is_not_found(self):
+        other = get_user_model().objects.create_user('other-owner')
+        for query in (scan_store.scan_devices, scan_store.scan_findings):
+            with self.assertRaises(ScanNotFound):
+                query(self.scan.pk, other)
+
+    def test_queries_reject_a_missing_user(self):
+        with self.assertRaises(ValueError):
+            scan_store.scan_history(None)
+        for query in (scan_store.scan_devices, scan_store.scan_findings):
+            with self.assertRaises(ValueError):
+                query(self.scan.pk, None)
+
+    def test_owner_less_scan_is_not_found(self):
+        orphan = running_scan()
+        scan_store.save_results(orphan, SCANNER_HOSTS)
+        for query in (scan_store.scan_devices, scan_store.scan_findings):
+            with self.assertRaises(ScanNotFound):
+                query(orphan.pk, self.user)

@@ -31,6 +31,10 @@ class ScanStateError(Exception):
     """The scan isn't in the state this step needs (e.g. saving results twice)."""
 
 
+class ScanNotFound(Exception):
+    """No scan with that ID belongs to the given user (missing or someone else's)."""
+
+
 def _now():
     return timezone.now().replace(microsecond=0)
 
@@ -139,17 +143,28 @@ STATUS_LABELS = {
 SEVERITY_ORDER = ['critical', 'high', 'medium', 'low', 'info']
 
 
-def scan_history(user=None):
-    """
-    Scan History rows, newest first (history_results.sql).
+def _check_user(user):
+    # filter(user=None) would match owner-less scans, so None is never a valid owner.
+    if user is None:
+        raise ValueError('Dashboard queries need the signed-in user.')
 
-    With `user`, only that user's scans. With no user, every scan: that is the
-    pre-login behaviour (WBS 9.0). Once login exists, views must pass the
-    signed-in user.
+
+def _require_owned(scan_id, user):
+    """Raise ScanNotFound unless `scan_id` belongs to `user`."""
+    _check_user(user)
+    if not Scan.objects.filter(pk=scan_id, user=user).exists():
+        raise ScanNotFound(scan_id)
+
+
+def scan_history(user):
     """
-    scans = Scan.objects.all()
-    if user is not None:
-        scans = scans.filter(user=user)
+    Scan History rows for `user`'s scans, newest first (history_results.sql).
+
+    Every dashboard query is scoped to an owner (WBS 9.0); there is no
+    all-users listing.
+    """
+    _check_user(user)
+    scans = Scan.objects.filter(user=user)
     # distinct=True stops the hosts→findings join inflating the counts.
     scans = scans.annotate(
         devices_found=Count('hosts', distinct=True),
@@ -171,13 +186,15 @@ def scan_history(user=None):
     ]
 
 
-def scan_devices(scan_id):
+def scan_devices(scan_id, user):
     """
-    Devices rows for one scan: one per service, plus one per host with no
-    services (service_results.sql). The caller must authorize `scan_id`.
+    Devices rows for one of `user`'s scans: one per service, plus one per host
+    with no services (service_results.sql). Raises ScanNotFound if the scan is
+    missing or belongs to someone else.
     """
+    _require_owned(scan_id, user)
     rows = []
-    hosts = Host.objects.filter(scan_id=scan_id).order_by('ip_address').prefetch_related('services')
+    hosts = Host.objects.filter(scan_id=scan_id, scan__user=user).order_by('ip_address').prefetch_related('services')
     for host in hosts:
         base = {'host_id': host.host_id, 'ip_address': host.ip_address, 'hostname': host.hostname}
         services = sorted(host.services.all(), key=lambda s: (s.port, s.protocol))
@@ -191,17 +208,19 @@ def scan_devices(scan_id):
     return rows
 
 
-def scan_findings(scan_id):
+def scan_findings(scan_id, user):
     """
-    Findings rows for one scan, most severe first (finding_results.sql).
-    The caller must authorize `scan_id`.
+    Findings rows for one of `user`'s scans, most severe first
+    (finding_results.sql). Raises ScanNotFound if the scan is missing or
+    belongs to someone else.
     """
+    _require_owned(scan_id, user)
     rank = Case(
         *[When(severity=severity, then=Value(i)) for i, severity in enumerate(SEVERITY_ORDER)],
         output_field=IntegerField(),
     )
     findings = (
-        Finding.objects.filter(service__host__scan_id=scan_id)
+        Finding.objects.filter(service__host__scan_id=scan_id, service__host__scan__user=user)
         .select_related('service__host')
         .order_by(rank, 'service__host__ip_address', 'service__port')
     )
