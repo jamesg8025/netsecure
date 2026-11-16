@@ -32,7 +32,7 @@ checkboxes do not mark whole-system testing or other owners' work complete.
 - [x] Create Django project structure, settings, URLs — **Austin**
 - [x] REST API routes for scan, devices, findings, history — **Austin**
 - [ ] Scan control: initiate, track status, return results — **Austin**
-- [ ] Input validation and error handling — **Austin**
+- [x] Input validation and error handling — **Austin**
 
 ### Database (WBS 5.0) · Sep 21–Oct 18
 - [x] Design SQLite schema (scans, hosts, ports, services, findings) — **Matt**
@@ -232,3 +232,14 @@ announced on every tick, and with reduced motion the spinner stops and the bar
 is hidden. The bar can't show a real percentage because scans are still
 synchronous; that waits on "Scan control: initiate, track status, return
 results" (WBS 4.0).
+
+### Input validation and error handling — November 15, 2026
+
+WBS 4.0 (FR-02): "Input validation and error handling" is checked off. Every
+`/api/` error returns one JSON shape, including 404, 405, CSRF failures, and
+unexpected 500s (`backend/api/errors.py`). Request bodies are checked by shared
+helpers (`backend/api/validation.py`) used by the scan and login endpoints.
+Scan targets go through the scanner's validator before anything is stored or
+scanned (`backend/api/targets.py`), and failed scans are saved with their
+reason (NFR-04). Error codes are listed under API Error Format in
+`ARCHITECTURE.md`. Login throttling and scan control remain separate items.

@@ -71,8 +71,7 @@ As of initial scaffold:
 - **`backend/`** — Django 6.1 project initialized (`config/` project package,
   `api/` app). Settings read from environment variables. Routes are listed under
   API Endpoints below. All `/api/` errors return JSON (see API Error Format below).
-  Scan-target validation is a fail-closed placeholder until the scanner's
-  validator exists.
+  Scan targets are checked by the scanner's validator (`api/targets.py`).
 - **`scanner/`** — Empty (`.gitkeep`). Scanner module not yet created.
 - **`database/`** — Matt's SQLite schema (`schema.sql`) and dashboard queries.
   Django migrations own the live schema (`backend/api/models.py`); scans are
@@ -97,9 +96,8 @@ Architecture and Interfaces phase (Sep 16–27).
 
 All under `/api/`, implemented in `backend/api/views.py`. Timestamps are ISO 8601
 UTC (`2026-11-02T01:00:00Z`). The browser protects dashboard routes with the
-session login flow (see Authentication below). The scan endpoints still don't
-require a logged-in session or restrict scans by owner; backend access control
-is the remaining WBS 9.0 item.
+session login flow (see Authentication below), and the backend requires a
+session for every scan endpoint (see Scan authorization below).
 
 | Method + path | Returns |
 |---------------|---------|
@@ -169,17 +167,18 @@ cause (bad input, unknown URL, wrong method, CSRF failure, server error):
 |--------|--------|------|
 | 400 | `invalid_json` | Body is not valid JSON, or not a JSON object |
 | 400 | `validation_error` | A field is missing, the wrong type, blank, or too long |
-| 400 | `invalid_target` | Scanner validator rejected the target (FR-02) — available once the scanner is integrated |
+| 400 | `invalid_target` | Scanner validator rejected the target (FR-02) |
 | 400 | `bad_request` | Other malformed request |
 | 401 | `invalid_credentials` | Login with a wrong username or password, or an inactive account (one message for all) |
-| 401 | `not_authenticated` | `GET /api/auth/me/` without a logged-in session |
+| 401 | `not_authenticated` | `GET /api/auth/me/` or a scan endpoint without a logged-in session |
 | 403 | `forbidden` | Permission denied or CSRF check failed |
 | 404 | `not_found` | Unknown URL or missing resource |
+| 404 | `scan_not_found` | Scan doesn't exist or belongs to another user |
 | 405 | `method_not_allowed` | Wrong HTTP method (`Allow` header lists valid ones) |
 | 413 | `payload_too_large` | Body exceeds Django's upload size limit |
 | 415 | `unsupported_media_type` | Body sent without `Content-Type: application/json` |
 | 500 | `internal_error` | Unexpected server error (details are logged, never returned) |
-| 503 | `target_validation_unavailable` | Scan requested before the scanner's target validator is integrated |
+| 502 | `scan_failed` | Nmap failed or timed out; the scan is saved as failed with the reason |
 
 Implemented in `backend/api/errors.py` (format and middleware),
 `backend/api/validation.py` (request body checks), and `backend/api/targets.py`
