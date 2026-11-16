@@ -29,6 +29,10 @@ def _raise_api_error(request):
     raise ApiError(409, 'conflict_example', 'Something conflicted.', {'field': 'x'})
 
 
+def _raise_api_error_with_headers(request):
+    raise ApiError(429, 'slow_down_example', 'Slow down.', headers={'Retry-After': '60'})
+
+
 def _raise_http404(request):
     raise Http404('secret detail')
 
@@ -61,6 +65,7 @@ def _validate_target(request):
 urlpatterns = [
     path('api/', include('api.urls')),
     path('api/test/api-error/', _raise_api_error),
+    path('api/test/api-error-headers/', _raise_api_error_with_headers),
     path('api/test/http404/', _raise_http404),
     path('api/test/permission-denied/', _raise_permission_denied),
     path('api/test/unexpected/', _raise_unexpected),
@@ -132,6 +137,12 @@ class ApiErrorResponseTests(SimpleTestCase):
                 'details': {'field': 'x'},
             },
         })
+
+    def test_api_error_headers_are_sent_with_the_json_body(self):
+        response = self.client.get('/api/test/api-error-headers/')
+
+        self.assertApiError(response, 429, 'slow_down_example')
+        self.assertEqual(response['Retry-After'], '60')
 
     def test_http404_does_not_leak_its_message(self):
         response = self.client.get('/api/test/http404/')

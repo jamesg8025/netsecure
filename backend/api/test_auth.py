@@ -1,6 +1,7 @@
 """Tests for login, logout, and the current user (WBS 9.0, UC-01)."""
 from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 
@@ -14,9 +15,16 @@ class AuthTestCase(TestCase):
     def setUpTestData(cls):
         cls.user = get_user_model().objects.create_user(username='alice', password=PASSWORD)
 
-    def login(self, client=None, **body):
+    def setUp(self):
+        # Failed-login counts live in the cache; don't let them leak between tests.
+        cache.clear()
+        self.addCleanup(cache.clear)
+
+    def login(self, client=None, ip='127.0.0.1', **body):
         client = client or self.client
-        return client.post(reverse('api:auth-login'), data=body, content_type='application/json')
+        return client.post(
+            reverse('api:auth-login'), data=body, content_type='application/json', REMOTE_ADDR=ip
+        )
 
     def assertApiError(self, response, status, code, field=None):
         self.assertEqual(response.status_code, status)

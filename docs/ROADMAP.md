@@ -243,3 +243,14 @@ Scan targets go through the scanner's validator before anything is stored or
 scanned (`backend/api/targets.py`), and failed scans are saved with their
 reason (NFR-04). Error codes are listed under API Error Format in
 `ARCHITECTURE.md`. Login throttling and scan control remain separate items.
+
+### Login throttling — November 15, 2026
+
+WBS 9.0 (UC-01): repeated failed logins are now throttled. Five failures for
+one username from one IP, or 20 from one IP across all usernames, within 15
+minutes lock out further logins until that window ends: `POST /api/auth/login/`
+returns 429 `too_many_login_attempts` with `Retry-After`, and the login page
+shows the message. Counts are in Django's in-memory cache (per server process,
+cleared on restart). See Authentication in `ARCHITECTURE.md`. "Restrict scans
+to authorized users and approved targets" stays unchecked: the approved-target
+policy is still open.

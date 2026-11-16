@@ -103,7 +103,7 @@ session for every scan endpoint (see Scan authorization below).
 |---------------|---------|
 | `GET /api/health/` | `{ status: "ok" }` |
 | `GET /api/csrf/` | `{ csrfToken }`, and sets the CSRF cookie POSTs need |
-| `POST /api/auth/login/` | Body `{ username, password }`. Starts a session. `{ user: { id, username }, csrfToken }`; 400 `validation_error` for a missing/blank field, 401 `invalid_credentials` |
+| `POST /api/auth/login/` | Body `{ username, password }`. Starts a session. `{ user: { id, username }, csrfToken }`; 400 `validation_error` for a missing/blank field, 401 `invalid_credentials`, 429 `too_many_login_attempts` after repeated failures |
 | `POST /api/auth/logout/` | Ends the session. 204, logged in or not |
 | `GET /api/auth/me/` | `{ user: { id, username } }`; 401 `not_authenticated` |
 | `POST /api/scans/` | Body `{ target, profile? }`. Runs the scan synchronously and saves it. `{ scan_id, target, profile, hosts }`; 400 invalid input, 502 scan failed (still saved as failed) |
@@ -129,6 +129,14 @@ accounts with `python manage.py createsuperuser` or the Django admin.
   with the `csrfToken` from the login response, or its next POST fails with 403.
 - Passwords are checked exactly as typed (no whitespace trimming); usernames
   are trimmed.
+- Repeated failed logins are throttled (`backend/api/login_throttle.py`): 5
+  failures for one username from one IP, or 20 from one IP across all
+  usernames, within 15 minutes of the first failure. Past either limit, login
+  returns 429 with `Retry-After` until that window ends, even with the right
+  password. A successful login clears the username + IP count. Limits are the
+  `LOGIN_THROTTLE_*` settings. Counts live in Django's in-memory cache, so each
+  server process keeps its own and a restart clears them. The client IP is
+  `REMOTE_ADDR`; behind a reverse proxy all clients would share one count.
 - The frontend loads the session user once through `GET /api/auth/me/` before
   rendering dashboard routes. Logged-out users go to `/login` and return to
   their requested path after signing in. Logged-in users opening `/login` return
@@ -177,6 +185,7 @@ cause (bad input, unknown URL, wrong method, CSRF failure, server error):
 | 405 | `method_not_allowed` | Wrong HTTP method (`Allow` header lists valid ones) |
 | 413 | `payload_too_large` | Body exceeds Django's upload size limit |
 | 415 | `unsupported_media_type` | Body sent without `Content-Type: application/json` |
+| 429 | `too_many_login_attempts` | Too many failed logins; `Retry-After` gives the seconds to wait |
 | 500 | `internal_error` | Unexpected server error (details are logged, never returned) |
 | 502 | `scan_failed` | Nmap failed or timed out; the scan is saved as failed with the reason |
 

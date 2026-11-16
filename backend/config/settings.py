@@ -149,6 +149,12 @@ SECURE_COOKIES = (
 SESSION_COOKIE_SECURE = SECURE_COOKIES
 CSRF_COOKIE_SECURE = SECURE_COOKIES
 
+# Failed logins are throttled per username + client IP and per client IP; see
+# api/login_throttle.py. Counts are kept in the default (in-memory) cache.
+LOGIN_THROTTLE_WINDOW = 15 * 60  # seconds, from the first failure
+LOGIN_THROTTLE_USER_LIMIT = 5  # failures for one username from one IP
+LOGIN_THROTTLE_IP_LIMIT = 20  # failures from one IP, across all usernames
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/6.1/topics/i18n/
