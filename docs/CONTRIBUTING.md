@@ -126,12 +126,3 @@ password. In development, restarting `runserver` clears the block.
 **Why this matters:** A scoped prompt lets the agent make one focused PR that's
 easy to review. A vague prompt leads to sprawling changes that are hard to review
 and may step into another owner's area.
-
-## Rules to Remember
-
-- **Never skip target validation** — see the Critical Safety Rule in `AGENTS.md`.
-- **Flag cross-area changes** before making them.
-- **Don't change the SQLite schema** without discussing it first.
-- **Tests ship with the code**, not in a follow-up.
-
-For the full set of rules, read [`AGENTS.md`](../AGENTS.md).
